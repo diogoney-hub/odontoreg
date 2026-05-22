@@ -155,7 +155,7 @@ Você pode me fazer perguntas em texto ou **anexar uma imagem/print de uma posta
     Por favor, responda com base no site oficial do CFO (cfo.org.br) e no site oficial do CRO-${selectedUF}.`;
 
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash:generateContent?key=${apiKey}`;
       
       const parts = [{ text: userQueryText }];
       
