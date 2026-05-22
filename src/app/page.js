@@ -159,32 +159,69 @@ export default function Home() {
 
     try {
       const url = '/api/chat';
-      const payload = {
+      
+      // 1ª Requisição: Obter a resposta em texto instantaneamente sem o Google Search
+      const payloadFast = {
         userQueryText: userQueryText,
         systemPrompt: systemPrompt,
-        currentAttachment: currentAttachment
+        currentAttachment: currentAttachment,
+        mode: 'fast-answer'
       };
 
-      const result = await fetchWithRetry(url, {
+      const resultFast = await fetchWithRetry(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payloadFast)
       });
 
-      const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "Desculpe, não consegui analisar sua requisição neste momento.";
-      
-      const attributions = result.candidates?.[0]?.groundingMetadata?.groundingAttributions;
-      const sources = attributions 
-        ? attributions.map(a => ({ uri: a.web?.uri, title: a.web?.title })).filter(s => s.uri) 
-        : [];
-      const uniqueSources = Array.from(new Map(sources.map(item => [item.uri, item])).values());
+      const responseText = resultFast.candidates?.[0]?.content?.parts?.[0]?.text || "Desculpe, não consegui analisar sua requisição neste momento.";
+      const messageId = Date.now() + 1;
 
       setMessages(prev => [...prev, {
-        id: Date.now() + 1,
+        id: messageId,
         role: 'model',
         text: responseText,
-        sources: uniqueSources
+        sources: [],
+        isSearchingSources: true
       }]);
+      
+      // O texto já apareceu! Desligamos o loader principal do envio.
+      setIsLoading(false);
+
+      // 2ª Requisição: Agora ligamos o Google Search para buscar os links em background
+      const payloadSources = {
+        userQueryText: userQueryText,
+        systemPrompt: systemPrompt,
+        currentAttachment: currentAttachment,
+        mode: 'search-sources'
+      };
+
+      try {
+        const resultSources = await fetchWithRetry(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payloadSources)
+        });
+
+        const attributions = resultSources.candidates?.[0]?.groundingMetadata?.groundingAttributions;
+        const sources = attributions 
+          ? attributions.map(a => ({ uri: a.web?.uri, title: a.web?.title })).filter(s => s.uri) 
+          : [];
+        const uniqueSources = Array.from(new Map(sources.map(item => [item.uri, item])).values());
+
+        setMessages(prev => prev.map(msg => 
+          msg.id === messageId 
+            ? { ...msg, sources: uniqueSources, isSearchingSources: false } 
+            : msg
+        ));
+      } catch (sourceError) {
+        console.error("Erro ao buscar as fontes:", sourceError);
+        setMessages(prev => prev.map(msg => 
+          msg.id === messageId 
+            ? { ...msg, isSearchingSources: false } 
+            : msg
+        ));
+      }
 
     } catch (error) {
       console.error(error);
@@ -194,7 +231,6 @@ export default function Home() {
         text: "Houve um problema de conexão ao consultar as bases de dados ou processar a imagem. Tente novamente em alguns segundos.",
         isError: true
       }]);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -344,6 +380,12 @@ export default function Home() {
                           </a>
                         ))}
                       </div>
+                    </div>
+                  )}
+                  {msg.isSearchingSources && (
+                    <div className="mt-2 flex items-center gap-2 px-3 py-2 bg-white rounded-xl border border-gray-100 shadow-sm text-xs text-blue-600 font-medium">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Buscando fontes e links oficiais no Google...
                     </div>
                   )}
                 </div>

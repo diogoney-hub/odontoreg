@@ -21,7 +21,7 @@ export async function POST(req) {
 
   try {
     const body = await req.json();
-    const { userQueryText, currentAttachment, systemPrompt } = body;
+    const { userQueryText, currentAttachment, systemPrompt, mode } = body;
 
     const parts = [{ text: userQueryText }];
     
@@ -39,8 +39,12 @@ export async function POST(req) {
     const payload = {
       contents: [{ role: 'user', parts: parts }],
       systemInstruction: { parts: [{ text: systemPrompt }] },
-      tools: [{ googleSearch: {} }] 
     };
+
+    // Só adiciona a pesquisa no Google se o modo não for explicitamente "fast-answer"
+    if (mode !== 'fast-answer') {
+      payload.tools = [{ googleSearch: {} }];
+    }
 
     // Usando gemini-flash-lite-latest para máxima velocidade de resposta
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`;
