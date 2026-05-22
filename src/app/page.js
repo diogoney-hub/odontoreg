@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Settings, 
@@ -11,7 +13,6 @@ import {
   Image as ImageIcon,
   X
 } from 'lucide-react';
-// IMPORTAÇÃO DO VERCEL ANALYTICS
 import { Analytics } from '@vercel/analytics/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -28,14 +29,10 @@ const BRAZILIAN_STATES = [
   { uf: 'SP', name: 'São Paulo' }, { uf: 'SE', name: 'Sergipe' }, { uf: 'TO', name: 'Tocantins' }
 ];
 
-// Helper para chamadas de API com Exponential Backoff
-const fetchWithRetry = async (url, options, retries = 5, delay = 1000) => {
+const fetchWithRetry = async (url, options, retries = 3, delay = 1000) => {
   try {
-    // ESSA LINHA ABAIXO É O NOSSO DEDO-DURO (ADICIONE ELA):
-    console.log("🔗 O app está tentando chamar este link exato:", url);
-
     const response = await fetch(url, options);
-    if (!response.ok) throw new Error(`Erro na comunicação com a IA: ${response.status}`);
+    if (!response.ok) throw new Error(`Erro na comunicação: ${response.status}`);
     return await response.json();
   } catch (error) {
     if (retries > 0) {
@@ -46,7 +43,6 @@ const fetchWithRetry = async (url, options, retries = 5, delay = 1000) => {
   }
 };
 
-// Converte File para Base64
 const fileToBase64 = (file) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -56,13 +52,12 @@ const fileToBase64 = (file) => {
   });
 };
 
-export default function App() {
+export default function Home() {
   const [step, setStep] = useState('onboarding'); 
   const [selectedUF, setSelectedUF] = useState('');
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   
-  // States para o anexo de imagem
   const [attachment, setAttachment] = useState(null); 
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
@@ -71,7 +66,6 @@ export default function App() {
   const [errorMsg, setErrorMsg] = useState('');
   const messagesEndRef = useRef(null);
 
-  // Auto-scroll para a última mensagem no chat
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -82,7 +76,7 @@ export default function App() {
 
   const handleStart = () => {
     if (!selectedUF) {
-      setErrorMsg('Por favor, selecione o estado correspondente ao seu CRO para continuar. Isso é importante, para termos as regras e normas do seu CRO especificamente, em conjunto com o CFO.');
+      setErrorMsg('Por favor, selecione o estado correspondente ao seu CRO para continuar. Isso é importante para termos as regras e normas do seu CRO especificamente.');
       return;
     }
     setErrorMsg('');
@@ -91,21 +85,17 @@ export default function App() {
       {
         id: Date.now(),
         role: 'model',
-        text: `Olá, colega! Sou o seu assistente **OdontoReg**, uma solução da DNA Solução Digital. Estou configurado para buscar regulamentações e orientações do **CFO** e do **CRO-${selectedUF}** e te ajudar no que for possível. 
-        
-Você pode por exemplo me fazer perguntas em texto ou anexar uma **imagem/print** para eu analisar e te indicar se é possível ferir alguma regra ética ou de compliance com este texto ou imagem (que pode ser uma postagem, por exemplo). 
-
-**Vamos lá!**`
+        text: `Olá, colega! Sou o seu assistente **OdontoReg**, uma solução da DNA Solução Digital. Estou configurado para buscar regulamentações e orientações do **CFO** e do **CRO-${selectedUF}** e te ajudar no que for possível. \n\nVocê pode por exemplo me fazer perguntas em texto ou anexar uma **imagem/print** para eu analisar e te indicar se é possível ferir alguma regra ética ou de compliance com este texto ou imagem (que pode ser uma postagem, por exemplo). \n\n**Vamos lá!**`
       }
     ]);
   };
 
   const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('Por favor, selecione um arquivo de imagem (PNG, JPG). Para vídeos, envie um print da tela no momento exato que você quer a minha análise.');
+      alert('Por favor, selecione um arquivo de imagem (PNG, JPG).');
       return;
     }
 
@@ -149,7 +139,7 @@ Você pode por exemplo me fazer perguntas em texto ou anexar uma **imagem/print*
     setIsLoading(true);
     setErrorMsg('');
 
-    const systemPrompt = `Você é um assistente jurídico e ético especializado em odontologia no Brasil. Deve possui todos os conhecimentos nas regras, normas, leis, orientações e atribuições do CFO (Conselho Federal de Odontologia) e de todos os Conselhos Regionais (CRO). 
+    const systemPrompt = `Você é um assistente jurídico e ético especializado em odontologia no Brasil. Deve possuir todos os conhecimentos nas regras, normas, leis, orientações e atribuições do CFO (Conselho Federal de Odontologia) e de todos os Conselhos Regionais (CRO). 
     Seu objetivo é ajudar dentistas a entenderem as regras e orientações do CFO (Conselho Federal de Odontologia) e dos Conselhos Regionais (CRO).
     Diretrizes obrigatórias:
     1. Utilize linguagem extremamente simples, clara, direta e empática.
@@ -168,10 +158,7 @@ Você pode por exemplo me fazer perguntas em texto ou anexar uma **imagem/print*
     Por favor, responda com base no site oficial do CFO (cfo.org.br) e no site oficial do CRO-${selectedUF}.`;
 
     try {
-      
-      // Usa a nossa rota protegida (Serverless Function no Vercel)
       const url = '/api/chat';
-      
       const payload = {
         userQueryText: userQueryText,
         systemPrompt: systemPrompt,
@@ -184,13 +171,12 @@ Você pode por exemplo me fazer perguntas em texto ou anexar uma **imagem/print*
         body: JSON.stringify(payload)
       });
 
-      const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "Desculpe, não consegui analisar sua requisição neste momento. Tente novamente em 90 segundos.";
+      const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "Desculpe, não consegui analisar sua requisição neste momento.";
       
       const attributions = result.candidates?.[0]?.groundingMetadata?.groundingAttributions;
       const sources = attributions 
         ? attributions.map(a => ({ uri: a.web?.uri, title: a.web?.title })).filter(s => s.uri) 
         : [];
-
       const uniqueSources = Array.from(new Map(sources.map(item => [item.uri, item])).values());
 
       setMessages(prev => [...prev, {
@@ -205,7 +191,7 @@ Você pode por exemplo me fazer perguntas em texto ou anexar uma **imagem/print*
       setMessages(prev => [...prev, {
         id: Date.now() + 1,
         role: 'model',
-        text: "Houve um problema de conexão ao consultar as bases de dados ou processar a imagem. API.",
+        text: "Houve um problema de conexão ao consultar as bases de dados ou processar a imagem. Tente novamente em alguns segundos.",
         isError: true
       }]);
     } finally {
@@ -232,9 +218,9 @@ Você pode por exemplo me fazer perguntas em texto ou anexar uma **imagem/print*
             <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
               <BookOpen className="w-8 h-8 text-blue-600" />
             </div>
-            <h1 className="text-3xl font-bold  text-blue-800 leading-tight">Odonto<label className="text-red-700">Reg</label></h1>
-            <p className="text-gray-600">Assistente de auditoria ética e regulatória com IA</p>
-            <p className="text-blue-800"><strong>DN<label className="text-red-700">A</label><label className="text-black"> Solução Digital</label></strong></p>
+            <h1 className="text-3xl font-bold text-blue-800 leading-tight">Odonto<span className="text-red-700">Reg</span></h1>
+            <p className="text-gray-600 mt-2">Assistente de auditoria ética e regulatória com IA</p>
+            <p className="text-blue-800 mt-1"><strong>DN<span className="text-red-700">A</span><span className="text-black"> Solução Digital</span></strong></p>
           </div>
           
           <div className="p-8">
@@ -295,7 +281,7 @@ Você pode por exemplo me fazer perguntas em texto ou anexar uma **imagem/print*
             <BookOpen className="w-5 h-5 text-blue-600" />
           </div>
           <div>
-            <h1 className="text-lg font-bold  text-blue-800 leading-tight">Odonto<label className="text-red-700">Reg</label></h1>
+            <h1 className="text-lg font-bold text-blue-800 leading-tight">Odonto<span className="text-red-700">Reg</span></h1>
             <p className="text-xs text-black font-medium"><strong>Conselhos em Análise:</strong> CFO e CRO-{selectedUF}</p>
           </div>
         </div>
@@ -333,7 +319,7 @@ Você pode por exemplo me fazer perguntas em texto ou anexar uma **imagem/print*
                         remarkPlugins={[remarkGfm]}
                         components={{
                           p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
-                          a: ({node, ...props}) => <a className="underline font-semibold" target="_blank" rel="noopener noreferrer" {...props} />,
+                          a: ({node, ...props}) => <a className="underline font-semibold text-blue-400 hover:text-blue-300" target="_blank" rel="noopener noreferrer" {...props} />,
                           ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-2 space-y-1" {...props} />,
                           ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-2 space-y-1" {...props} />,
                           li: ({node, ...props}) => <li {...props} />,
@@ -428,23 +414,7 @@ Você pode por exemplo me fazer perguntas em texto ou anexar uma **imagem/print*
         </div>
       </footer>
 
-      {/* O COMPONENTE COMPATÍVEL DO VERCEL ANALYTICS COMPILADO COM SUCESSO EM PROJETOS VITE */}
       <Analytics />
-
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
