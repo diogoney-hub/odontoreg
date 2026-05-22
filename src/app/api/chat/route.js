@@ -42,8 +42,8 @@ export async function POST(req) {
       tools: [{ googleSearch: {} }] 
     };
 
-    // Usando gemini-3.5-flash que é o suportado pela sua nova chave
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+    // Usando gemini-flash-lite-latest para máxima velocidade de resposta
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
       method: 'POST',
