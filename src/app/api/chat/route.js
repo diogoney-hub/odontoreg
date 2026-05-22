@@ -34,8 +34,8 @@ export async function POST(req) {
       tools: [{ googleSearch: {} }] 
     };
 
-    // Usando gemini-1.5-flash (a versão recomendada de produção)
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    // Usando gemini-3.0-flash (conforme sua solicitação)
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.0-flash:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
       method: 'POST',
@@ -49,7 +49,7 @@ export async function POST(req) {
       console.error('Erro na API do Gemini:', data);
       return NextResponse.json(
         { error: 'Erro ao se comunicar com a inteligência artificial.', details: data }, 
-        { status: response.status }
+        { status: 502 } // Forçamos 502 (Bad Gateway) para não confundir com o 404 de rota não encontrada
       );
     }
 
