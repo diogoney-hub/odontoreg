@@ -1,7 +1,15 @@
 import { NextResponse } from 'next/server';
 
+export async function GET(req) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return NextResponse.json({ error: 'No key' }, { status: 500 });
+  const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+  const response = await fetch(url);
+  const data = await response.json();
+  return NextResponse.json(data);
+}
+
 export async function POST(req) {
-  // Pega a chave da API do ambiente (lembre-se de configurar no painel da Vercel)
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
@@ -34,8 +42,8 @@ export async function POST(req) {
       tools: [{ googleSearch: {} }] 
     };
 
-    // Usando gemini-3.0-flash (conforme sua solicitação)
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.0-flash:generateContent?key=${apiKey}`;
+    // Usando gemini-1.5-flash (vamos voltar ao padrão mas o erro era outro)
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
       method: 'POST',
@@ -49,7 +57,7 @@ export async function POST(req) {
       console.error('Erro na API do Gemini:', data);
       return NextResponse.json(
         { error: 'Erro ao se comunicar com a inteligência artificial.', details: data }, 
-        { status: 502 } // Forçamos 502 (Bad Gateway) para não confundir com o 404 de rota não encontrada
+        { status: 502 } 
       );
     }
 
