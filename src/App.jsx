@@ -11,9 +11,10 @@ import {
   Image as ImageIcon,
   X
 } from 'lucide-react';
-
-// LEITURA DA CHAVE NO ARQUIVO .env
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+// IMPORTAÇÃO DO VERCEL ANALYTICS
+import { Analytics } from '@vercel/analytics/react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const BRAZILIAN_STATES = [
   { uf: 'AC', name: 'Acre' }, { uf: 'AL', name: 'Alagoas' }, { uf: 'AP', name: 'Amapá' },
@@ -30,6 +31,9 @@ const BRAZILIAN_STATES = [
 // Helper para chamadas de API com Exponential Backoff
 const fetchWithRetry = async (url, options, retries = 5, delay = 1000) => {
   try {
+    // ESSA LINHA ABAIXO É O NOSSO DEDO-DURO (ADICIONE ELA):
+    console.log("🔗 O app está tentando chamar este link exato:", url);
+
     const response = await fetch(url, options);
     if (!response.ok) throw new Error(`Erro na comunicação com a IA: ${response.status}`);
     return await response.json();
@@ -61,6 +65,7 @@ export default function App() {
   // States para o anexo de imagem
   const [attachment, setAttachment] = useState(null); 
   const fileInputRef = useRef(null);
+  const textareaRef = useRef(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -77,7 +82,7 @@ export default function App() {
 
   const handleStart = () => {
     if (!selectedUF) {
-      setErrorMsg('Por favor, selecione seu estado para continuar.');
+      setErrorMsg('Por favor, selecione o estado correspondente ao seu CRO para continuar. Isso é importante, para termos as regras e normas do seu CRO especificamente, em conjunto com o CFO.');
       return;
     }
     setErrorMsg('');
@@ -86,9 +91,11 @@ export default function App() {
       {
         id: Date.now(),
         role: 'model',
-        text: `Olá, colega! Sou o assistente OdontoReg. Estou configurado para buscar regulamentações do **CFO** e do **CRO-${selectedUF}**. 
+        text: `Olá, colega! Sou o seu assistente **OdontoReg**, uma solução da DNA Solução Digital. Estou configurado para buscar regulamentações e orientações do **CFO** e do **CRO-${selectedUF}** e te ajudar no que for possível. 
         
-Você pode me fazer perguntas em texto ou **anexar uma imagem/print de uma postagem** para eu analisar se ela fere alguma regra ética de publicidade odontológica.`
+Você pode por exemplo me fazer perguntas em texto ou anexar uma **imagem/print** para eu analisar e te indicar se é possível ferir alguma regra ética ou de compliance com este texto ou imagem (que pode ser uma postagem, por exemplo). 
+
+**Vamos lá!**`
       }
     ]);
   };
@@ -98,7 +105,7 @@ Você pode me fazer perguntas em texto ou **anexar uma imagem/print de uma posta
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('Por favor, selecione um arquivo de imagem (PNG, JPG). Para vídeos, envie um print da tela.');
+      alert('Por favor, selecione um arquivo de imagem (PNG, JPG). Para vídeos, envie um print da tela no momento exato que você quer a minha análise.');
       return;
     }
 
@@ -126,7 +133,7 @@ Você pode me fazer perguntas em texto ou **anexar uma imagem/print de uma posta
     const userMsg = { 
       id: Date.now(), 
       role: 'user', 
-      text: inputText.trim() || 'Pode analisar esta imagem com base nas regras do CFO?',
+      text: inputText.trim() || 'Pode analisar esta imagem com base nas regras do CFO e do CRO indicado?',
       imagePreview: attachment?.preview
     };
     
@@ -136,43 +143,39 @@ Você pode me fazer perguntas em texto ou **anexar uma imagem/print de uma posta
     const currentAttachment = attachment;
     setInputText('');
     setAttachment(null);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = '50px';
+    }
     setIsLoading(true);
     setErrorMsg('');
 
-    const systemPrompt = `Você é um assistente jurídico e ético especializado em odontologia no Brasil. 
-    Seu objetivo é ajudar dentistas a entenderem as regras do CFO (Conselho Federal de Odontologia) e dos Conselhos Regionais (CRO).
+    const systemPrompt = `Você é um assistente jurídico e ético especializado em odontologia no Brasil. Deve possui todos os conhecimentos nas regras, normas, leis, orientações e atribuições do CFO (Conselho Federal de Odontologia) e de todos os Conselhos Regionais (CRO). 
+    Seu objetivo é ajudar dentistas a entenderem as regras e orientações do CFO (Conselho Federal de Odontologia) e dos Conselhos Regionais (CRO).
     Diretrizes obrigatórias:
     1. Utilize linguagem extremamente simples, clara, direta e empática.
     2. Pesquise na internet as normativas ATUAIS do CFO e, principalmente, do CRO do estado do usuário.
-    3. Traga a fonte de onde tirou a informação no texto (ex: "Segundo o Artigo X do Código de Ética (Resolução CFO 118/2012)...").
+    3. Traga sempre a fonte de onde tirou a informação no texto (ex: "Segundo o Artigo X do Código de Ética (Resolução CFO 118/2012)...") e com um link de acesso ao usuário para que ele possa acessar a fonte.
     4. Se o usuário enviar uma imagem (foto, panfleto, print de rede social), FAÇA UMA AUDITORIA RIGOROSA DE MARKETING ODONTOLÓGICO. 
        - Analise se há promessa de resultados, uso indevido de 'Antes e Depois' (sem o nome e CRO do profissional), sensacionalismo, divulgação de preços/promoções, exposição desnecessária do paciente, ou falta das informações obrigatórias na arte.
        - Aponte os potenciais problemas éticos encontrados na imagem e sugira o que ele deve corrigir para adequar ao Código de Ética.
-    5. Se não houver uma regra específica, diga claramente que não encontrou uma proibição/permissão explícita nos normativos atuais.`;
+    5. Se não houver uma regra específica, diga claramente que não encontrou uma proibição/permissão explícita nos normativos atuais.
+    6. Sempre que apontar um possível erro, uma possível violação ou algum alerta, indique:
+       - O que pode ser realizado para eliminar ou minimizar o erro / violação / alerta.
+       - Se estiver em dúvida ou incerteza, indique claramente o nível de certeza e confiabilidade da informação.`;
 
-    const userQueryText = `O usuário é um dentista registrado no estado: ${selectedUF} (CRO-${selectedUF}). 
+    const userQueryText = `O usuário é registrado no estado: ${selectedUF} (CRO-${selectedUF}). 
     Texto do usuário: ${currentInputText}
     Por favor, responda com base no site oficial do CFO (cfo.org.br) e no site oficial do CRO-${selectedUF}.`;
 
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash:generateContent?key=${apiKey}`;
       
-      const parts = [{ text: userQueryText }];
+      // Usa a nossa rota protegida (Serverless Function no Vercel)
+      const url = '/api/chat';
       
-      if (currentAttachment) {
-        const base64Data = currentAttachment.base64.split(',')[1];
-        parts.push({
-          inlineData: {
-            mimeType: currentAttachment.mimeType,
-            data: base64Data
-          }
-        });
-      }
-
       const payload = {
-        contents: [{ role: 'user', parts: parts }],
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        tools: [{ google_search: {} }]
+        userQueryText: userQueryText,
+        systemPrompt: systemPrompt,
+        currentAttachment: currentAttachment
       };
 
       const result = await fetchWithRetry(url, {
@@ -181,7 +184,7 @@ Você pode me fazer perguntas em texto ou **anexar uma imagem/print de uma posta
         body: JSON.stringify(payload)
       });
 
-      const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "Desculpe, não consegui analisar sua requisição neste momento.";
+      const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "Desculpe, não consegui analisar sua requisição neste momento. Tente novamente em 90 segundos.";
       
       const attributions = result.candidates?.[0]?.groundingMetadata?.groundingAttributions;
       const sources = attributions 
@@ -202,7 +205,7 @@ Você pode me fazer perguntas em texto ou **anexar uma imagem/print de uma posta
       setMessages(prev => [...prev, {
         id: Date.now() + 1,
         role: 'model',
-        text: "Houve um problema de conexão ao consultar as bases de dados ou processar a imagem. Por favor, certifique-se de que sua Chave de API está correta no arquivo .env e tente novamente.",
+        text: "Houve um problema de conexão ao consultar as bases de dados ou processar a imagem. API.",
         isError: true
       }]);
     } finally {
@@ -221,38 +224,22 @@ Você pode me fazer perguntas em texto ou **anexar uma imagem/print de uma posta
     fileInputRef.current?.click();
   };
 
-  const renderFormattedText = (text) => {
-    return text.split('\n').map((line, i) => {
-      const parts = line.split(/(\*\*.*?\*\*)/g);
-      return (
-        <span key={i}>
-          {parts.map((part, j) => {
-            if (part.startsWith('**') && part.endsWith('**')) {
-              return <strong key={j} className="font-bold text-gray-900">{part.slice(2, -2)}</strong>;
-            }
-            return part;
-          })}
-          {i !== text.split('\n').length - 1 && <br />}
-        </span>
-      );
-    });
-  };
-
   if (step === 'onboarding') {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden">
-          <div className="bg-blue-600 p-8 text-center">
+          <div className="bg-gray-200 p-8 text-center">
             <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
               <BookOpen className="w-8 h-8 text-blue-600" />
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">OdontoReg</h1>
-            <p className="text-blue-100">Auditoria ética e regulatória com IA</p>
+            <h1 className="text-3xl font-bold  text-blue-800 leading-tight">Odonto<label className="text-red-700">Reg</label></h1>
+            <p className="text-gray-600">Assistente de auditoria ética e regulatória com IA</p>
+            <p className="text-blue-800"><strong>DN<label className="text-red-700">A</label><label className="text-black"> Solução Digital</label></strong></p>
           </div>
           
           <div className="p-8">
             <h2 className="text-xl font-semibold text-gray-800 mb-6 text-center">
-              Para começarmos, indique o seu Conselho Regional
+              Selecione o seu Conselho Regional e clique no botão abaixo.
             </h2>
             
             <div className="space-y-4">
@@ -262,7 +249,7 @@ Você pode me fazer perguntas em texto ou **anexar uma imagem/print de uma posta
                 </label>
                 <div className="relative">
                   <select
-                    className="w-full appearance-none bg-gray-50 border border-gray-300 text-gray-700 py-3 px-4 pr-8 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full appearance-none hover:bg-blue-100 bg-gray-50 border border-gray-300 text-gray-700 py-3 px-4 pr-8 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     value={selectedUF}
                     onChange={(e) => setSelectedUF(e.target.value)}
                   >
@@ -288,9 +275,9 @@ Você pode me fazer perguntas em texto ou **anexar uma imagem/print de uma posta
 
               <button
                 onClick={handleStart}
-                className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl flex items-center justify-center transition-colors shadow-md hover:shadow-lg"
+                className="w-full mt-6 bg-blue-700 hover:bg-blue-800 text-white font-semibold py-3 px-6 rounded-xl flex items-center justify-center transition-colors shadow-md hover:shadow-lg"
               >
-                Acessar Assistente
+                Acessar o Assistente
                 <ChevronRight className="w-5 h-5 ml-2" />
               </button>
             </div>
@@ -308,8 +295,8 @@ Você pode me fazer perguntas em texto ou **anexar uma imagem/print de uma posta
             <BookOpen className="w-5 h-5 text-blue-600" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-gray-800 leading-tight">OdontoReg</h1>
-            <p className="text-xs text-blue-600 font-medium">Análise: CFO e CRO-{selectedUF}</p>
+            <h1 className="text-lg font-bold  text-blue-800 leading-tight">Odonto<label className="text-red-700">Reg</label></h1>
+            <p className="text-xs text-black font-medium"><strong>Conselhos em Análise:</strong> CFO e CRO-{selectedUF}</p>
           </div>
         </div>
         <button 
@@ -323,9 +310,9 @@ Você pode me fazer perguntas em texto ou **anexar uma imagem/print de uma posta
 
       <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
         <div className="max-w-3xl mx-auto space-y-6">
-          <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-800 flex gap-3 shadow-sm">
-             <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-             <p>Você pode fazer o <strong>upload de uma arte ou print de vídeo</strong> para verificar se está de acordo com as resoluções de marketing (Art. 44 do Código de Ética e afins). O app analisará a imagem enviada.</p>
+          <div className="bg-gray-100 border border-blue-100 rounded-xl p-4 text-sm text-blue-800 flex gap-3 shadow-sm">
+              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <p><strong>Importante:</strong> você deve me considerar como um assistente, sempre vou te indicar em qual documento eu estou baseando as minhas respostas, para que você também possa conferir na fonte as informações que estou usando para a minha resposta.</p>
           </div>
 
           {messages.map((msg) => (
@@ -341,7 +328,24 @@ Você pode me fazer perguntas em texto ou **anexar uma imagem/print de uma posta
                         <img src={msg.imagePreview} alt="Imagem enviada" className="max-h-48 rounded-lg object-contain bg-black/10 border border-black/5" />
                       </div>
                     )}
-                    {msg.text && renderFormattedText(msg.text)}
+                    {msg.text && (
+                      <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
+                          a: ({node, ...props}) => <a className="underline font-semibold" target="_blank" rel="noopener noreferrer" {...props} />,
+                          ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-2 space-y-1" {...props} />,
+                          ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-2 space-y-1" {...props} />,
+                          li: ({node, ...props}) => <li {...props} />,
+                          h1: ({node, ...props}) => <h1 className="text-xl font-bold mb-2 mt-4" {...props} />,
+                          h2: ({node, ...props}) => <h2 className="text-lg font-bold mb-2 mt-3" {...props} />,
+                          h3: ({node, ...props}) => <h3 className="text-md font-bold mb-2 mt-2" {...props} />,
+                          strong: ({node, ...props}) => <strong className="font-bold" {...props} />
+                        }}
+                      >
+                        {msg.text}
+                      </ReactMarkdown>
+                    )}
                   </div>
                   {msg.sources && msg.sources.length > 0 && (
                     <div className="mt-2 space-y-1 w-full bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
@@ -373,7 +377,7 @@ Você pode me fazer perguntas em texto ou **anexar uma imagem/print de uma posta
                       <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
                       <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
                     </div>
-                    <span className="text-xs text-gray-500 ml-2">Analisando e pesquisando...</span>
+                    <span className="text-xs text-gray-500 ml-2">Aguarde: Analisando e pesquisando...</span>
                   </div>
                </div>
             </div>
@@ -403,11 +407,16 @@ Você pode me fazer perguntas em texto ou **anexar uma imagem/print de uma posta
             </button>
             <div className="relative flex-1">
               <textarea
+                ref={textareaRef}
                 value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
+                onChange={(e) => {
+                  setInputText(e.target.value);
+                  e.target.style.height = '50px';
+                  e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+                }}
                 onKeyDown={handleKeyPress}
                 placeholder={attachment ? "Escreva algo sobre a imagem (opcional)..." : "Faça uma pergunta ou anexe uma arte para avaliar..."}
-                className="w-full bg-gray-50 border border-gray-300 rounded-2xl pl-4 pr-14 py-3.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none h-[50px] max-h-[120px] shadow-inner transition-all text-gray-700"
+                className="w-full bg-gray-50 border border-gray-300 rounded-2xl pl-4 pr-14 py-3.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none min-h-[50px] shadow-inner transition-all text-gray-700"
                 rows="1"
                 disabled={isLoading}
               />
@@ -418,6 +427,24 @@ Você pode me fazer perguntas em texto ou **anexar uma imagem/print de uma posta
           </div>
         </div>
       </footer>
+
+      {/* O COMPONENTE COMPATÍVEL DO VERCEL ANALYTICS COMPILADO COM SUCESSO EM PROJETOS VITE */}
+      <Analytics />
+
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
