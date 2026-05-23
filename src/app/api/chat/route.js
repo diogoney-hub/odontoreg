@@ -46,8 +46,8 @@ export async function POST(req) {
       payload.tools = [{ googleSearch: {} }];
     }
 
-    // Usando gemini-flash-lite-latest para máxima velocidade de resposta
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`;
+    // Usando gemini-3.5-flash para suportar envio de imagem sem erro de permissão
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
       method: 'POST',

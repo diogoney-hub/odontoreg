@@ -1,0 +1,9 @@
+{
+  "userQueryText": "teste",
+  "systemPrompt": "teste",
+  "mode": "fast-answer",
+  "currentAttachment": {
+    "base64": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+    "mimeType": "image/png"
+  }
+}
