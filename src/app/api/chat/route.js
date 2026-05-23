@@ -46,8 +46,10 @@ export async function POST(req) {
       payload.tools = [{ googleSearch: {} }];
     }
 
-    // Usando gemini-3.5-flash para suportar envio de imagem sem erro de permissão
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+    // Se tiver anexo (imagem), usamos o modelo multimodal habilitado para a chave
+    // Caso contrário, usamos o gemini-flash-lite-latest que é o mais rápido
+    const modelName = currentAttachment ? 'gemini-3.1-flash-image-preview' : 'gemini-flash-lite-latest';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
       method: 'POST',
