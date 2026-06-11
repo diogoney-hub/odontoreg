@@ -21,14 +21,19 @@ export async function POST(req) {
 
   try {
     const body = await req.json();
-    const { userQueryText, currentAttachment, systemPrompt, mode } = body;
+    const { history = [], userQueryText, currentAttachment, systemPrompt, mode } = body;
 
-    const parts = [{ text: userQueryText }];
+    const contents = history.map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.text || '' }]
+    }));
+
+    const currentParts = [{ text: userQueryText }];
     
     if (currentAttachment) {
-      // Pega apenas o Base64 ignorando o cabeçalho 'data:image/png;base64,'
+      // Pega apenas o Base64 ignorando o cabeçalho 'data:image/png;base64,' ou 'data:application/pdf;base64,'
       const base64Data = currentAttachment.base64.split(',')[1];
-      parts.push({
+      currentParts.push({
         inlineData: {
           mimeType: currentAttachment.mimeType,
           data: base64Data
@@ -36,13 +41,16 @@ export async function POST(req) {
       });
     }
 
+    contents.push({ role: 'user', parts: currentParts });
+
     const payload = {
-      contents: [{ role: 'user', parts: parts }],
+      contents: contents,
       systemInstruction: { parts: [{ text: systemPrompt }] },
     };
 
     // Só adiciona a pesquisa no Google se o modo não for explicitamente "fast-answer"
-    if (mode !== 'fast-answer') {
+    // E desativa o Google Search se houver um anexo (PDF/Imagem), pois a API do Gemini pode rejeitar a combinação.
+    if (mode !== 'fast-answer' && !currentAttachment) {
       payload.tools = [{ googleSearch: {} }];
     }
 
@@ -71,7 +79,7 @@ export async function POST(req) {
   } catch (error) {
     console.error('Erro interno na API Route:', error);
     return NextResponse.json(
-      { error: 'Ocorreu um erro inesperado no servidor.' }, 
+      { error: 'Ocorreu um erro inesperado no servidor.', details: error.message, stack: error.stack }, 
       { status: 500 }
     );
   }

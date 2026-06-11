@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minha conta · OdontoConforme</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ===== Mesmo sistema de design da landing ===== */
+  :root{
+    --ink:#0d2233; --ink-soft:#3c5567; --paper:#f6f8f6; --white:#ffffff;
+    --green:#137a52; --green-bright:#16a06b; --green-soft:#e4f2ea;
+    --line:#d8e3dc; --amber:#c47a16; --danger:#b3402f; --danger-soft:#fbeae7;
+    --shadow:0 10px 40px -12px rgba(13,34,51,.14); --radius:16px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Hanken Grotesk',sans-serif;color:var(--ink);background:var(--paper);line-height:1.6;-webkit-font-smoothing:antialiased}
+  h1,h2,h3{font-family:'Fraunces',serif;line-height:1.15;letter-spacing:-.01em;font-weight:600}
+  .wrap{max-width:760px;margin:0 auto;padding:0 24px}
+  a{color:inherit}
+
+  header{background:rgba(246,248,246,.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+  .nav{display:flex;align-items:center;justify-content:space-between;height:68px}
+  .logo{display:flex;align-items:center;gap:.5rem;font-family:'Fraunces',serif;font-weight:700;font-size:1.25rem}
+  .logo .mark{width:28px;height:28px;border-radius:8px;background:var(--green);display:grid;place-items:center;color:#fff;font-size:.95rem}
+  .logo b{color:var(--green)}
+  .nav-actions{display:flex;align-items:center;gap:1.2rem;font-size:.92rem}
+  .nav-actions a{color:var(--ink-soft);text-decoration:none;font-weight:500}
+  .nav-actions a:hover{color:var(--green)}
+  .btn-back{display:inline-flex;align-items:center;gap:.4rem;background:var(--green-bright);color:#fff;padding:.55rem 1.1rem;border-radius:999px;font-weight:600;text-decoration:none;font-size:.9rem}
+
+  main{padding:48px 0 80px}
+  .greeting{margin-bottom:2rem}
+  .greeting h1{font-size:1.9rem;margin-bottom:.3rem}
+  .greeting p{color:var(--ink-soft)}
+
+  .card{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:1.8rem;box-shadow:var(--shadow);margin-bottom:1.4rem}
+  .card h2{font-size:1.05rem;font-family:'Hanken Grotesk',sans-serif;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--green);margin-bottom:1.2rem;display:flex;align-items:center;gap:.5rem}
+
+  /* Plano e uso */
+  .status-row{display:flex;flex-wrap:wrap;gap:1.6rem;align-items:flex-end;justify-content:space-between}
+  .status-badge{display:inline-flex;align-items:center;gap:.45rem;background:var(--green-soft);color:var(--green);font-weight:700;padding:.4rem .9rem;border-radius:999px;font-size:.88rem}
+  .renew{color:var(--ink-soft);font-size:.96rem;margin-top:.7rem}
+  .renew b{color:var(--ink)}
+  .usage{margin-top:1.4rem}
+  .usage-label{display:flex;justify-content:space-between;font-size:.92rem;margin-bottom:.5rem}
+  .usage-label .count{font-weight:700}
+  .bar{height:9px;background:var(--green-soft);border-radius:999px;overflow:hidden}
+  .bar span{display:block;height:100%;background:var(--green-bright);border-radius:999px;width:60%}
+  .usage-unlimited{font-size:.96rem;color:var(--ink-soft);margin-top:1.2rem;display:none}
+
+  /* genérico de seção */
+  .sec-text{color:var(--ink-soft);font-size:.97rem;margin-bottom:1.2rem}
+  .sec-text b{color:var(--ink)}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;background:var(--green-bright);color:#fff;font-weight:600;padding:.8rem 1.4rem;border-radius:999px;border:none;cursor:pointer;text-decoration:none;font-size:.95rem;transition:background .15s ease}
+  .btn:hover{background:#138c5d}
+  .btn-outline{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+  .btn-outline:hover{background:var(--paper);border-color:var(--ink-soft)}
+  .btn-danger{background:transparent;color:var(--danger);border:1.5px solid #e7c4bd}
+  .btn-danger:hover{background:var(--danger-soft)}
+
+  .rules{list-style:none;margin:0 0 1.3rem;display:grid;gap:.6rem}
+  .rules li{display:flex;gap:.6rem;align-items:flex-start;color:var(--ink-soft);font-size:.95rem}
+  .rules .dot{color:var(--green);font-weight:800;flex-shrink:0}
+
+  footer{text-align:center;color:var(--ink-soft);font-size:.82rem;padding:24px 0 40px;line-height:1.7}
+
+  /* Modal de cancelamento */
+  .overlay{position:fixed;inset:0;background:rgba(13,34,51,.5);display:none;align-items:center;justify-content:center;padding:24px;z-index:100}
+  .overlay.show{display:flex}
+  .modal{background:#fff;border-radius:18px;max-width:440px;width:100%;padding:2rem;box-shadow:0 30px 70px -20px rgba(0,0,0,.4)}
+  .modal h3{font-size:1.3rem;margin-bottom:.7rem}
+  .modal p{color:var(--ink-soft);font-size:.96rem;margin-bottom:1.5rem}
+  .modal-actions{display:flex;gap:.8rem;flex-wrap:wrap}
+
+  @media(max-width:560px){.greeting h1{font-size:1.6rem}.card{padding:1.4rem}.nav-actions span{display:none}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <div class="logo"><span class="mark">✓</span>Odonto<b>Conforme</b></div>
+    <div class="nav-actions">
+      <!-- INTEGRAÇÃO: este botão volta para o app de consulta (o produto em si) -->
+      <a href="#" class="btn-back">← Voltar para as consultas</a>
+      <!-- INTEGRAÇÃO: logout do Supabase Auth -->
+      <a href="#" id="logout">Sair</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+
+    <div class="greeting">
+      <!-- INTEGRAÇÃO: nome vem do Supabase (perfil do usuário logado) -->
+      <h1>Olá, Dr. Ricardo</h1>
+      <p>Aqui você acompanha seu plano, seu uso e gerencia sua assinatura.</p>
+    </div>
+
+    <!-- ===== 1. PLANO E USO ===== -->
+    <div class="card">
+      <h2>Plano e uso</h2>
+      <div class="status-row">
+        <div>
+          <!-- INTEGRAÇÃO: status vem do campo de assinatura no Supabase, sincronizado pelo webhook do Asaas.
+               Estados possíveis: "Em teste", "Ativo", "Pagamento pendente", "Cancelado" -->
+          <span class="status-badge" id="statusBadge">● Em teste grátis</span>
+          <p class="renew" id="renewText">
+            Seu teste termina em <b>09/06/2026</b>. Depois, sua assinatura de <b>R$29/mês</b> começa automaticamente.
+          </p>
+        </div>
+      </div>
+
+      <!-- Estado TESTE: contador de 30 consultas -->
+      <div class="usage" id="usageTrial">
+        <div class="usage-label">
+          <span>Consultas no teste</span>
+          <!-- INTEGRAÇÃO: contagem real de consultas do usuário no Supabase -->
+          <span class="count">18 de 30</span>
+        </div>
+        <div class="bar"><span style="width:60%"></span></div>
+      </div>
+
+      <!-- Estado PAGO: plano ilimitado, sem barra (trocar display para 'block' e esconder #usageTrial quando assinante ativo) -->
+      <p class="usage-unlimited" id="usagePaid">
+        Seu plano inclui <b>consultas ilimitadas</b>. Use sempre que precisar.
+      </p>
+    </div>
+
+    <!-- ===== 2. FINANCEIRO (ASAAS) ===== -->
+    <div class="card">
+      <h2>Pagamentos e faturas</h2>
+      <p class="sec-text">
+        Suas faturas, recibos e a forma de pagamento são gerenciados com segurança pelo nosso
+        provedor de pagamentos. Lá você pode ver o histórico de cobranças e atualizar seu cartão.
+      </p>
+      <!-- INTEGRAÇÃO: link para a área do assinante / fatura no Asaas.
+           Pode ser o link da assinatura do cliente no Asaas, ou um embed da fatura. -->
+      <a href="#" class="btn btn-outline" target="_blank" rel="noopener">Gerenciar pagamentos →</a>
+    </div>
+
+    <!-- ===== 3. SUPORTE ===== -->
+    <div class="card">
+      <h2>Suporte</h2>
+      <p class="sec-text">
+        Tem alguma dúvida ou problema? Escreva para a gente. Respondemos por e-mail,
+        normalmente em até um dia útil.
+      </p>
+      <!-- INTEGRAÇÃO: trocar pelo e-mail real de suporte -->
+      <a href="mailto:suporte@odontoconforme.com.br?subject=Suporte%20OdontoConforme" class="btn">Enviar e-mail ao suporte</a>
+    </div>
+
+    <!-- ===== 4. CANCELAMENTO ===== -->
+    <div class="card">
+      <h2>Cancelar assinatura</h2>
+      <p class="sec-text">Você pode cancelar quando quiser, pelo mesmo lugar onde assinou. Sem multa, sem ligação.</p>
+      <!-- ATENÇÃO JURÍDICA: estas regras são um rascunho padrão de SaaS mensal.
+           Confirme com seu contador/advogado antes de publicar, principalmente a parte de
+           acesso até o fim do período pago e ausência de reembolso proporcional. -->
+      <ul class="rules">
+        <li><span class="dot">•</span> Durante o teste grátis, cancelar encerra o acesso na hora e nenhuma cobrança é feita.</li>
+        <li><span class="dot">•</span> Como assinante, seu acesso continua até o fim do período já pago. Não há cobrança no período seguinte.</li>
+        <li><span class="dot">•</span> O cancelamento é imediato e você recebe a confirmação por e-mail.</li>
+      </ul>
+      <button class="btn btn-danger" id="cancelBtn">Cancelar assinatura</button>
+    </div>
+
+    <footer>
+      OdontoConforme · uma solução DNA Solução Digital<br>
+      Ferramenta de orientação baseada nas normas do CFO e dos CROs. Não emite aval ou selo oficial e não substitui assessoria jurídica.
+    </footer>
+
+  </div>
+</main>
+
+<!-- Modal de confirmação de cancelamento -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3>Cancelar sua assinatura?</h3>
+    <p>Você manterá o acesso até <b>09/07/2026</b>, fim do período já pago. Depois disso, suas consultas serão encerradas. Tem certeza?</p>
+    <div class="modal-actions">
+      <!-- INTEGRAÇÃO: este botão chama a API do Asaas (via backend do app) para cancelar a assinatura,
+           atualiza o status no Supabase e dispara o e-mail de confirmação. -->
+      <button class="btn btn-danger" id="confirmCancel">Sim, cancelar</button>
+      <button class="btn btn-outline" id="keepSub">Manter assinatura</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Apenas interação de UI. A lógica real de cancelamento e os dados vêm do backend (Supabase + Asaas).
+  const overlay = document.getElementById('overlay');
+  document.getElementById('cancelBtn').addEventListener('click', ()=> overlay.classList.add('show'));
+  document.getElementById('keepSub').addEventListener('click', ()=> overlay.classList.remove('show'));
+  overlay.addEventListener('click', (e)=>{ if(e.target===overlay) overlay.classList.remove('show'); });
+  document.getElementById('confirmCancel').addEventListener('click', ()=>{
+    // INTEGRAÇÃO: chamar aqui o endpoint do seu backend que aciona o cancelamento no Asaas.
+    overlay.classList.remove('show');
+    alert('Demonstração: aqui o app chamaria o Asaas para cancelar e atualizaria seu status.');
+  });
+
+  /* INTEGRAÇÃO: ao carregar, ler o status real do usuário e alternar entre os estados:
+     - Se "Em teste":  mostrar #usageTrial, esconder #usagePaid
+     - Se "Ativo":     esconder #usageTrial, mostrar #usagePaid, ajustar #statusBadge e #renewText
+  */
+</script>
+</body>
+</html>

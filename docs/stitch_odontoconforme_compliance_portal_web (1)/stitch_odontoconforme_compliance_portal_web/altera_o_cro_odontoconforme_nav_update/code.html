@@ -1,0 +1,125 @@
+<!DOCTYPE html><html class="light" lang="pt-BR" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Alteração CRO - OdontoConforme</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=Inter+Tight:wght@600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">tailwind.config = {darkMode: "class", theme: {extend: {colors: {"surface-container": "#eeeeee", "tertiary-fixed-dim": "#64dca2", "on-primary": "#ffffff", "surface-bright": "#f9f9f9", "on-tertiary": "#ffffff", "secondary-fixed-dim": "#bccac2", "on-tertiary-fixed-variant": "#005234", secondary: "#54615b", "on-primary-container": "#a8ffcf", "line-border": "#d8e3dc", "on-tertiary-fixed": "#002112", "on-tertiary-container": "#acffd0", "on-background": "#1a1c1c", "ink-soft": "#3c5567", "on-secondary": "#ffffff", "error-container": "#ffdad6", surface: "#f9f9f9", "on-primary-fixed": "#002113", "inverse-primary": "#7dd9a9", "status-amber": "#c47a16", "on-secondary-fixed-variant": "#3d4a44", "on-secondary-container": "#5a6761", "tertiary-fixed": "#82f9bc", error: "#ba1a1a", "on-surface-variant": "#3f4942", "secondary-fixed": "#d8e6de", "on-secondary-fixed": "#121e19", "primary-container": "#137a52", primary: "#005f3e", "surface-container-highest": "#e2e2e2", outline: "#6f7a72", "inverse-on-surface": "#f0f1f1", "on-error-container": "#93000a", "surface-container-low": "#f3f3f4", "on-primary-fixed-variant": "#005234", "on-error": "#ffffff", tertiary: "#00603d", "tertiary-container": "#007b50", "primary-fixed": "#99f5c4", "surface-container-lowest": "#ffffff", background: "#f9f9f9", "outline-variant": "#bec9c0", "primary-fixed-dim": "#7dd9a9", "surface-variant": "#e2e2e2", "surface-tint": "#006c47", "inverse-surface": "#2f3131", "on-surface": "#1a1c1c", "surface-dim": "#dadada", "surface-container-high": "#e8e8e8", "green-soft": "#e4f2ea", "secondary-container": "#d8e6de"}, borderRadius: {DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px"}, spacing: {"section-v-space": "80px", "container-narrow": "860px", gutter: "24px", "stack-gap": "1.25rem", "container-max": "1120px", "base-unit": "4px"}, fontFamily: {"display-lg": ["Inter"], "lead-text": ["Inter"], "pill-tag": ["Inter Tight"], "headline-lg-mobile": ["Inter"], "body-sm": ["Inter"], "label-caps": ["Inter Tight"], "headline-sm": ["Inter"], "headline-md": ["Inter"], "body-md": ["Inter"], "headline-lg": ["Inter"], headline: ["Inter"], display: ["Inter"], body: ["Inter"], label: ["Inter Tight"]}, fontSize: {"body-md": ["16px", {lineHeight: "1.6", fontWeight: "400"}], "body-sm": ["14px", {lineHeight: "1.5", fontWeight: "400"}], "display-lg": ["52px", {lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "600"}], "label-caps": ["12px", {lineHeight: "1.0", letterSpacing: "0.08em", fontWeight: "700"}], "lead-text": ["18px", {lineHeight: "1.6", fontWeight: "400"}], "headline-lg-mobile": ["32px", {lineHeight: "1.2", fontWeight: "600"}], "headline-md": ["32px", {lineHeight: "1.2", fontWeight: "600"}], "headline-sm": ["24px", {lineHeight: "1.3", fontWeight: "600"}], "headline-lg": ["42px", {lineHeight: "1.1", fontWeight: "600"}], "pill-tag": ["13px", {lineHeight: "1.0", fontWeight: "600"}]}}}};</script>
+<style>
+        body {
+            background-color: theme('colors.surface-bright');
+            color: theme('colors.on-surface');
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid theme('colors.line-border');
+        }
+        .glow-shadow {
+            box-shadow: 0 4px 14px 0 rgba(0, 95, 62, 0.25);
+        }
+        .form-input:focus, .form-select:focus {
+            border-color: theme('colors.primary');
+            box-shadow: 0 0 0 1px theme('colors.primary');
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-body-md text-body-md antialiased">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-surface-bright/85 border-b border-line-border dark:border-outline-variant shadow-sm backdrop-blur-md">
+<div class="flex justify-between items-center px-gutter w-full max-w-container-max mx-auto py-2"><div class="flex items-center gap-4">
+<img alt="OdontoConforme Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAwqZJppNoS5cbOhBKhUL2J6JOqcu6dnATAUmX1Ej-eFdC-k_nr6g_o6PNSNckCQPPRgKbBkP6CR-SjVKJ4xhQBtYatGEnOUcIfQcIzC0xTJbvoJJbntI0G5t-isPHZ5WPmJu1Pe2zKWd-Sokk4IYETNpPeZZvnB9WcMfrXyCBc84r49suV8jPeEoAjKEPxhQLUZ9KkORDkUD1L-V1upiCKVIv8HfnUC8dvSRkOaYTBfGe2n2B14v-TDCyWgjG1N_wxTDdBBct-RHYF" style="height: 56px;">
+</div>
+<div class="flex items-center gap-6 h-full">
+<a class="flex flex-col items-center justify-center h-full px-2 text-on-surface-variant hover:text-primary transition-all active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">search</span>
+<span class="text-label-caps font-semibold">Consultas</span>
+</a>
+<a class="flex flex-col items-center justify-center h-full px-2 text-primary border-b-2 border-primary transition-all active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">sync</span>
+<span class="text-label-caps font-semibold">Alteração CRO</span>
+</a>
+<a class="flex flex-col items-center justify-center h-full px-2 text-on-surface-variant hover:text-primary transition-all active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-label-caps font-semibold">Minha Conta</span>
+</a>
+<div class="flex items-center pl-4 border-l border-line-border h-8"><span class="text-body-sm text-on-surface-variant font-medium">dr.ricardo@exemplo.com.br</span></div></div></div>
+</nav>
+<!-- Main Content -->
+<main class="flex-grow flex items-center justify-center pt-24 pb-section-v-space px-gutter relative overflow-hidden">
+<!-- Decorative Background -->
+<div class="absolute inset-0 pointer-events-none flex justify-center items-center opacity-40">
+<img alt="Background reference style" class="object-cover w-full h-full opacity-10 blur-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAMBTnaq2X_ca7cQtHYdkWG_8uES37tg5-zVvQmTNDWRHcdthABe2szpIzXKIv9gyWh0DBplXk9Qm8CqPMuoBVnYtuTw-HqEBpBn6lz8NLNoJczxJ8z0eKoLoKu2q1u1SuIfWifp7XVpsIwIva_G9-wOKhAX67ZrJ8pyWqarHmftxkFzmkUTiZojYcx6Tv4Qv2D09EqTkvaE1pJuwwAtIhDqozPGF9RCmyBSw8FdU-3sCsWlvMZLC5KF4JhogOZ4qUr4bR_OG-z399G">
+</div>
+<div class="w-full max-w-container-narrow mx-auto relative z-10">
+<div class="max-w-[480px] mx-auto glass-panel rounded-xl shadow-sm p-8 hover:-translate-y-1 transition-transform duration-300">
+<div class="text-center mb-8">
+<div class="w-16 h-16 rounded-full bg-green-soft text-primary flex items-center justify-center mx-auto mb-6">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: &quot;FILL&quot; 1;">location_on</span>
+</div>
+<h1 class="font-headline-md text-headline-md text-on-surface mb-4">Alteração CRO</h1>
+<p class="font-lead-text text-lead-text text-on-surface-variant">Selecione o seu Conselho Regional e clique no botão abaixo para prosseguir com a consulta.</p>
+</div>
+<form class="space-y-6">
+<div>
+<label class="block font-label-caps text-label-caps text-secondary mb-2 uppercase tracking-wider" for="cro-select">Estado de Atuação (CRO)</label>
+<div class="relative">
+<select class="form-select block w-full pl-4 pr-10 py-3 text-on-surface bg-surface-container-lowest border border-line-border rounded-lg appearance-none focus:outline-none focus:ring-0 transition-colors font-body-md text-body-md cursor-pointer" id="cro-select"><option value="" disabled="" selected="" class="">Selecione seu estado</option>
+<option value="AC" class="">Acre - CRO-AC</option>
+<option value="AL" class="">Alagoas - CRO-AL</option>
+<option value="AP" class="">Amapá - CRO-AP</option>
+<option value="AM" class="">Amazonas - CRO-AM</option>
+<option value="BA" class="">Bahia - CRO-BA</option>
+<option value="CE" class="">Ceará - CRO-CE</option>
+<option value="DF" class="">Distrito Federal - CRO-DF</option>
+<option value="ES" class="">Espírito Santo - CRO-ES</option>
+<option value="GO" class="">Goiás - CRO-GO</option>
+<option value="MA" class="">Maranhão - CRO-MA</option>
+<option value="MT" class="">Mato Grosso - CRO-MT</option>
+<option value="MS" class="">Mato Grosso do Sul - CRO-MS</option>
+<option value="MG" class="">Minas Gerais - CRO-MG</option>
+<option value="PA" class="">Pará - CRO-PA</option>
+<option value="PB" class="">Paraíba - CRO-PB</option>
+<option value="PR" class="">Paraná - CRO-PR</option>
+<option value="PE" class="">Pernambuco - CRO-PE</option>
+<option value="PI" class="">Piauí - CRO-PI</option>
+<option value="RJ" class="">Rio de Janeiro - CRO-RJ</option>
+<option value="RN" class="">Rio Grande do Norte - CRO-RN</option>
+<option value="RS" class="">Rio Grande do Sul - CRO-RS</option>
+<option value="RO" class="">Rondônia - CRO-RO</option>
+<option value="RR" class="">Roraima - CRO-RR</option>
+<option value="SC" class="">Santa Catarina - CRO-SC</option>
+<option value="SP" class="">São Paulo - CRO-SP</option>
+<option value="SE" class="">Sergipe - CRO-SE</option>
+<option value="TO" class="">Tocantins - CRO-TO</option></select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-secondary">
+<span class="material-symbols-outlined">expand_more</span>
+</div>
+</div>
+</div>
+<div class="flex items-center pt-2">
+<input class="form-checkbox h-5 w-5 text-primary border-line-border rounded cursor-pointer focus:ring-primary focus:ring-offset-0" id="remember-cro" type="checkbox">
+<label class="ml-3 block font-body-md text-body-md text-on-surface-variant cursor-pointer" for="remember-cro">Lembrar este CRO?</label>
+</div>
+<div class="pt-4">
+<button class="w-full flex items-center justify-center py-4 px-6 border border-transparent rounded-full glow-shadow font-pill-tag text-pill-tag text-on-primary bg-primary hover:bg-tertiary focus:outline-none transition-all active:scale-95 duration-200" type="button">
+                            Acessar o Assistente
+                            <span class="material-symbols-outlined ml-2 text-xl leading-none">arrow_forward</span>
+</button>
+</div>
+</form>
+</div>
+</div>
+</main>
+<!-- Footer -->
+
+
+
+
+
+</body></html>

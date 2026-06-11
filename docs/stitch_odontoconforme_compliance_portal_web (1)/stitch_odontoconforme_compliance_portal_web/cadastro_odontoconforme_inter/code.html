@@ -1,0 +1,147 @@
+<!DOCTYPE html><html lang="pt-BR" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Cadastro - OdontoConforme</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;family=Inter+Tight:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">tailwind.config = {darkMode: "class", theme: {extend: {colors: {"on-primary-container": "#a8ffcf", "secondary-container": "#d8e6de", outline: "#6f7a72", "inverse-on-surface": "#f0f1f1", "tertiary-fixed": "#82f9bc", "surface-container": "#eeeeee", "on-secondary": "#ffffff", "on-background": "#1a1c1c", "error-container": "#ffdad6", "surface-container-low": "#f3f3f4", "surface-bright": "#f9f9f9", tertiary: "#00603d", "on-tertiary": "#ffffff", "surface-container-lowest": "#ffffff", "on-tertiary-fixed-variant": "#005234", "tertiary-fixed-dim": "#64dca2", "secondary-fixed": "#d8e6de", "on-error-container": "#93000a", "outline-variant": "#bec9c0", "on-tertiary-container": "#acffd0", "tertiary-container": "#007b50", secondary: "#54615b", "on-error": "#ffffff", background: "#f9f9f9", "primary-fixed": "#99f5c4", "primary-container": "#137a52", "inverse-surface": "#2f3131", "surface-container-highest": "#e2e2e2", "surface-variant": "#e2e2e2", "on-primary": "#ffffff", "on-secondary-container": "#5a6761", "surface-dim": "#dadada", error: "#ba1a1a", "surface-tint": "#006c47", "secondary-fixed-dim": "#bccac2", "on-tertiary-fixed": "#002112", "inverse-primary": "#7dd9a9", surface: "#f9f9f9", "on-secondary-fixed": "#121e19", "on-primary-fixed": "#002113", primary: "#005f3e", "on-surface-variant": "#3f4942", "on-surface": "#1a1c1c", "on-primary-fixed-variant": "#005234", "primary-fixed-dim": "#7dd9a9", "surface-container-high": "#e8e8e8", "on-secondary-fixed-variant": "#3d4a44"}, borderRadius: {DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px"}, spacing: {"stack-gap": "1.25rem", gutter: "24px", "container-max": "1120px", "section-v-space": "80px", "container-narrow": "860px", "base-unit": "4px"}, fontFamily: {"display-lg": ["Inter"], "lead-text": ["Inter"], "pill-tag": ["Inter Tight"], "headline-lg-mobile": ["Inter"], "body-sm": ["Inter"], "label-caps": ["Inter Tight"], "headline-sm": ["Inter"], "headline-md": ["Inter"], "body-md": ["Inter"], "headline-lg": ["Inter"], headline: ["Inter"], display: ["Inter"], body: ["Inter"], label: ["Inter Tight"]}, fontSize: {"display-lg": ["52px", {lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "700"}], "lead-text": ["18px", {lineHeight: "1.6", fontWeight: "400"}], "pill-tag": ["13px", {lineHeight: "1.0", fontWeight: "600"}], "headline-lg-mobile": ["32px", {lineHeight: "1.2", fontWeight: "600"}], "body-sm": ["14px", {lineHeight: "1.5", fontWeight: "400"}], "label-caps": ["12px", {lineHeight: "1.0", letterSpacing: "0.05em", fontWeight: "700"}], "headline-sm": ["24px", {lineHeight: "1.3", fontWeight: "600"}], "headline-md": ["32px", {lineHeight: "1.2", fontWeight: "600"}], "body-md": ["16px", {lineHeight: "1.6", fontWeight: "400"}], "headline-lg": ["42px", {lineHeight: "1.2", fontWeight: "600"}]}}}};</script>
+<style>
+        .custom-shadow {
+            box-shadow: 0 4px 24px -4px rgba(13, 34, 51, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-background min-h-screen flex flex-col antialiased">
+<!-- Registration Canvas -->
+<main class="flex-grow flex items-center justify-center p-gutter relative z-10 py-12">
+<div class="w-full max-w-[500px] bg-surface-container-lowest rounded-xl custom-shadow border border-line-border overflow-hidden">
+<!-- Logo Header -->
+<div class="pt-8 pb-6 px-8 flex justify-center border-b border-line-border bg-surface-bright">
+<img alt="OdontoConforme Logo" class="h-14 w-auto object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAwqZJppNoS5cbOhBKhUL2J6JOqcu6dnATAUmX1Ej-eFdC-k_nr6g_o6PNSNckCQPPRgKbBkP6CR-SjVKJ4xhQBtYatGEnOUcIfQcIzC0xTJbvoJJbntI0G5t-isPHZ5WPmJu1Pe2zKWd-Sokk4IYETNpPeZZvnB9WcMfrXyCBc84r49suV8jPeEoAjKEPxhQLUZ9KkORDkUD1L-V1upiCKVIv8HfnUC8dvSRkOaYTBfGe2n2B14v-TDCyWgjG1N_wxTDdBBct-RHYF">
+</div>
+<!-- Tabs -->
+<div class="flex border-b border-line-border">
+<button class="flex-1 py-4 text-center font-body-md text-on-surface-variant hover:bg-surface-container-low transition-colors bg-surface-container">
+                    Entrar
+                </button>
+<button class="flex-1 py-4 text-center font-body-md text-on-primary bg-primary-container rounded-t-lg shadow-[0_-4px_12px_rgba(0,95,62,0.15)] relative z-10 -mb-px">
+                    Cadastrar
+                </button>
+</div>
+<!-- Form Container -->
+<div class="p-8">
+<div class="text-center mb-8">
+<h1 class="font-headline-sm text-headline-sm text-on-surface mb-2">Crie sua conta</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Junte-se a milhares de profissionais em conformidade.</p>
+</div>
+<form class="space-y-5">
+<!-- Nome Completo -->
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface mb-2" for="name">Nome Completo</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">person</span>
+<input class="w-full pl-10 pr-4 py-3 bg-surface border border-line-border rounded-lg font-body-md text-body-md text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" id="name" placeholder="Dr. João Silva" type="text">
+</div>
+</div>
+<!-- E-mail -->
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface mb-2" for="email">E-mail</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">mail</span>
+<input class="w-full pl-10 pr-4 py-3 bg-surface border border-line-border rounded-lg font-body-md text-body-md text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" id="email" placeholder="joao@clinica.com.br" type="email">
+</div>
+</div>
+<!-- Senha -->
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface mb-2" for="password">Senha</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">lock</span>
+<input class="w-full pl-10 pr-4 py-3 bg-surface border border-line-border rounded-lg font-body-md text-body-md text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" id="password" placeholder="••••••••" type="password">
+</div>
+<p class="mt-2 font-body-sm text-[12px] text-outline">Mínimo de 8 caracteres, incluindo números.</p>
+</div>
+<!-- Perfil de Atuação -->
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface mb-2" for="profile">Perfil de Atuação</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">badge</span>
+<select class="w-full pl-10 pr-10 py-3 bg-surface border border-line-border rounded-lg font-body-md text-body-md text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all appearance-none" id="profile">
+<option disabled="" selected="" value="">Selecione seu perfil</option>
+<option value="dentista">Dentista</option>
+<option value="gestor">Gestor</option>
+<option value="analista">Analista</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline pointer-events-none">expand_more</span>
+</div>
+</div><!-- Escolha seu plano -->
+<div>
+    <label class="block font-label-caps text-label-caps text-on-surface mb-2" for="plan">Escolha seu plano</label>
+    <div class="relative">
+        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">payments</span>
+        <select class="w-full pl-10 pr-10 py-3 bg-surface border border-line-border rounded-lg font-body-md text-body-md text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all appearance-none" id="plan">
+            <option value="essencial">Essencial - R$ 29.90/mês</option>
+            <option value="completo">Completo - R$ 39.90/mês</option>
+        </select>
+        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline pointer-events-none">expand_more</span>
+    </div>
+    <p class="mt-2 font-body-sm text-[12px] text-primary-container">
+        Teste por 7 dias, com 10 consultas gratuitas · Cancele quando quiser
+    </p>
+</div>
+<!-- Checkboxes -->
+<div class="space-y-3 pt-2">
+<label class="flex items-start gap-3 cursor-pointer group">
+<div class="relative flex items-center justify-center mt-0.5">
+<input class="peer sr-only" type="checkbox">
+<div class="w-5 h-5 border border-line-border rounded bg-surface peer-checked:bg-primary peer-checked:border-primary transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px] text-on-primary opacity-0 peer-checked:opacity-100 transition-opacity">check</span>
+</div>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant group-hover:text-on-surface transition-colors">
+                                Concordo com os <a class="text-primary hover:underline" href="#">Termos de Uso</a> e <a class="text-primary hover:underline" href="#">Política de Privacidade</a>.
+                            </span>
+</label>
+<label class="flex items-start gap-3 cursor-pointer group">
+<div class="relative flex items-center justify-center mt-0.5">
+<input class="peer sr-only" type="checkbox">
+<div class="w-5 h-5 border border-line-border rounded bg-surface peer-checked:bg-primary peer-checked:border-primary transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px] text-on-primary opacity-0 peer-checked:opacity-100 transition-opacity">check</span>
+</div>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant group-hover:text-on-surface transition-colors">
+                                Aceito receber comunicações e novidades da OdontoConforme.
+                            </span>
+</label>
+</div>
+<!-- Submit Button -->
+<button class="w-full py-3 px-6 bg-primary text-on-primary rounded-full font-body-md text-body-md font-semibold hover:bg-tertiary transition-colors shadow-[0_4px_12px_rgba(0,95,62,0.2)] hover:shadow-[0_6px_16px_rgba(0,95,62,0.3)] mt-6" type="submit">
+                        Criar minha Conta
+                    </button>
+</form>
+<!-- Divider -->
+<div class="flex items-center gap-4 my-6">
+<div class="flex-1 h-px bg-line-border"></div>
+<span class="font-label-caps text-label-caps text-outline">OU</span>
+<div class="flex-1 h-px bg-line-border"></div>
+</div>
+<!-- Google SSO -->
+<button class="w-full flex items-center justify-center gap-3 py-3 px-6 bg-surface border border-line-border text-on-surface rounded-full font-body-md text-body-md hover:bg-surface-container-low transition-colors">
+<svg class="w-5 h-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
+<path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>
+<path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"></path>
+<path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"></path>
+</svg>
+                    Continuar com Google
+                </button>
+</div>
+</div>
+</main>
+
+
+
+
+
+
+</body></html>
