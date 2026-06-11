@@ -88,11 +88,13 @@ export async function POST(request) {
         process.env.NEXT_PUBLIC_SUPABASE_URL,
         process.env.SUPABASE_SERVICE_ROLE_KEY
       );
-      await supabaseAdmin.from('usuarios').update({ 
+      await supabaseAdmin.from('usuarios').upsert({ 
+        id: user.id,
+        nome_completo: user.user_metadata?.full_name || email,
         asaas_customer_id: customerId,
         documento: cpf,
         whatsapp: whatsapp
-      }).eq('id', user.id);
+      }, { onConflict: 'id' });
     } else {
       // O cliente já existe no Asaas (foi criado nos testes anteriores sem CPF). Vamos atualizá-lo!
       const updateRes = await fetch(`${ASAAS_URL}/customers/${customerId}`, {
@@ -114,10 +116,12 @@ export async function POST(request) {
         process.env.NEXT_PUBLIC_SUPABASE_URL,
         process.env.SUPABASE_SERVICE_ROLE_KEY
       );
-      await supabaseAdmin.from('usuarios').update({ 
+      await supabaseAdmin.from('usuarios').upsert({
+        id: user.id,
+        nome_completo: user.user_metadata?.full_name || email,
         documento: cpf,
-        whatsapp: whatsapp 
-      }).eq('id', user.id);
+        whatsapp: whatsapp
+      }, { onConflict: 'id' });
     }
 
     // 3. Criar uma Assinatura no Asaas
