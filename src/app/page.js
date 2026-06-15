@@ -312,6 +312,13 @@ export default function Home() {
       scrollToBottom();
   }, [messages, isLoading, attachment]);
 
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 240)}px`;
+    }
+  }, [inputText]);
+
   const handleStart = () => {
     if (!selectedUF) {
       setErrorMsg('Por favor, selecione um estado para continuar.');
@@ -379,9 +386,6 @@ export default function Home() {
     const currentAttachment = attachment;
     setInputText('');
     setAttachment(null);
-    if (textareaRef.current) {
-      textareaRef.current.style.height = '50px';
-    }
     setIsLoading(true);
     setErrorMsg('');
 
@@ -1067,14 +1071,10 @@ export default function Home() {
                 <textarea
                   ref={textareaRef}
                   value={inputText}
-                  onChange={(e) => {
-                    setInputText(e.target.value);
-                    e.target.style.height = '48px';
-                    e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
-                  }}
+                  onChange={(e) => setInputText(e.target.value)}
                   onKeyDown={handleKeyPress}
                   placeholder={attachment ? "Escreva algo (opcional)..." : "Faça uma pergunta ou anexe um documento para avaliar..."}
-                  className="flex-1 bg-transparent border-none focus:ring-0 resize-none max-h-32 min-h-[44px] py-3 text-on-surface font-body-md custom-scrollbar"
+                  className="flex-1 bg-transparent border-none focus:ring-0 resize-none max-h-[240px] min-h-[44px] py-3 text-on-surface font-body-md custom-scrollbar"
                   rows="1"
                   disabled={isLoading}
                 />
