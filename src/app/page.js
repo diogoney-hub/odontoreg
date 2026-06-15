@@ -79,6 +79,7 @@ export default function Home() {
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authName, setAuthName] = useState("");
+  const [authCpf, setAuthCpf] = useState("");
   const [authPerfil, setAuthPerfil] = useState("");
   const [authConsentTerms, setAuthConsentTerms] = useState(false);
   const [authConsentMarketing, setAuthConsentMarketing] = useState(false);
@@ -184,6 +185,11 @@ export default function Home() {
       setAuthError("Selecione seu Perfil de Atuação.");
       return;
     }
+    const cleanCpf = authCpf.replace(/\D/g, '');
+    if (cleanCpf.length !== 11) {
+      setAuthError("Por favor, insira um CPF válido.");
+      return;
+    }
     if (!authConsentTerms) {
       setAuthError("Você deve aceitar os Termos de Uso e Política de Privacidade.");
       return;
@@ -233,7 +239,8 @@ export default function Home() {
           utm_campaign: utmData.utm_campaign,
           utm_content: utmData.utm_content,
           referrer: utmData.referrer,
-          headline_variante: utmData.headline_variante
+          headline_variante: utmData.headline_variante,
+          documento: cleanCpf
         })
         .eq('id', signUpData.user.id);
         
@@ -249,7 +256,8 @@ export default function Home() {
              consentimento_marketing: authConsentMarketing,
              consentimento_versao: 'v1.0',
              consentimento_data: new Date().toISOString(),
-             consentimento_ip: ipData.ip || '0.0.0.0'
+             consentimento_ip: ipData.ip || '0.0.0.0',
+             documento: cleanCpf
           }]);
         }
       }
@@ -608,6 +616,10 @@ export default function Home() {
               <div>
                 <label className="block text-sm font-medium text-brand-text-secondary mb-1">Nome Completo</label>
                 <input type="text" required value={authName} onChange={e => setAuthName(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-green" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-brand-text-secondary mb-1">CPF</label>
+                <input type="text" required value={authCpf} onChange={e => setAuthCpf(e.target.value.replace(/\D/g, ''))} maxLength={11} placeholder="Apenas números" className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-green" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-brand-text-secondary mb-1">E-mail</label>
