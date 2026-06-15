@@ -109,6 +109,11 @@ export default function Home() {
         headline_variante: searchParams.get('headline') || null,
         referrer: document.referrer || null,
       });
+      
+      const modeParam = searchParams.get('mode');
+      if (modeParam === 'register' || modeParam === 'cadastrar') {
+        setAuthMode('register');
+      }
     }
 
     supabase.auth.getSession().then(({ data: { session } }) => {
