@@ -1050,8 +1050,8 @@ export default function Home() {
           <div id="chat-container" className="flex-1 p-4 sm:p-8 overflow-y-auto custom-scrollbar flex flex-col gap-6 relative z-10 w-full max-w-4xl mx-auto">
             
             {messages.length === 0 && (
-              <div className="max-w-3xl mx-auto w-full bg-white border border-gray-100 rounded-3xl p-10 shadow-sm text-center mt-10">
-                <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-8 text-on-primary shadow-sm">
+              <div className="max-w-3xl mx-auto w-full bg-white border border-gray-100 rounded-3xl p-6 sm:p-8 shadow-sm text-center mt-2">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-6 text-on-primary shadow-sm">
                   <span className="material-symbols-outlined text-[32px]">health_and_safety</span>
                 </div>
                 <h2 className="text-[32px] text-[#1c1c1c] mb-6 font-medium leading-tight">Olá, sou o seu<br />assistente <strong>OdontoConforme!</strong></h2>

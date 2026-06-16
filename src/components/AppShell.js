@@ -58,7 +58,7 @@ export default function AppShell({
       </nav>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex w-full px-4 sm:px-6 lg:px-8 mx-auto pt-20 sm:pt-24 pb-8">
+      <main className="flex-1 flex w-full px-4 sm:px-6 lg:px-8 mx-auto pt-[72px] sm:pt-20 pb-8">
         <div className="flex-1 flex flex-col relative w-full h-full">
           {children}
         </div>
