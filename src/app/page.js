@@ -1047,14 +1047,12 @@ export default function Home() {
       ) : (
         <div className="flex-1 flex flex-col bg-surface-container-lowest rounded-xl border border-line-border shadow-sm overflow-hidden relative w-full h-[calc(100vh-140px)]">
           {/* Background Image Texture removida para evitar lentidão (re-paint a cada keystroke) */}
-          <div id="chat-container" className="flex-1 p-4 sm:p-8 overflow-y-auto custom-scrollbar flex flex-col gap-6 relative z-10 w-full max-w-4xl mx-auto">
+          <div id="chat-container" className="flex-1 px-4 sm:px-8 pb-8 pt-2 sm:pt-4 overflow-y-auto custom-scrollbar flex flex-col gap-6 relative z-10 w-full max-w-4xl mx-auto">
             
             {messages.length === 0 && (
-              <div className="max-w-3xl mx-auto w-full bg-white border border-gray-100 rounded-3xl p-6 sm:p-8 shadow-sm text-center mt-2">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-6 text-on-primary shadow-sm">
-                  <span className="material-symbols-outlined text-[32px]">health_and_safety</span>
-                </div>
-                <h2 className="text-[32px] text-[#1c1c1c] mb-6 font-medium leading-tight">Olá, sou o seu<br />assistente <strong>OdontoConforme!</strong></h2>
+              <div className="max-w-3xl mx-auto w-full bg-white border border-gray-100 rounded-3xl px-6 sm:px-8 pb-8 pt-4 sm:pt-5 shadow-sm text-center mt-0">
+                <img src="/icone.png" alt="Ícone OdontoConforme" className="w-12 h-12 sm:w-16 sm:h-16 object-contain mx-auto mb-2" />
+                <h2 className="text-[28px] sm:text-[32px] text-[#1c1c1c] mb-6 font-medium leading-tight mt-2">Olá, sou o seu<br />assistente <strong>OdontoConforme!</strong></h2>
                 
                 <p className="text-[15px] text-[#555555] mb-8 max-w-2xl mx-auto leading-relaxed">
                   Estou aqui para te ajudar, buscando nas regulamentações, leis, normas e orientações do<br/>
