@@ -1283,7 +1283,7 @@ export default function Home() {
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyDown={handleKeyPress}
                   placeholder={attachment ? "Escreva algo (opcional)..." : "Faça uma pergunta ou anexe um documento para avaliar..."}
-                  className="flex-1 bg-transparent border-none focus:ring-0 resize-none max-h-[240px] min-h-[44px] py-3 text-on-surface font-body-md custom-scrollbar"
+                  className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 resize-none max-h-[240px] min-h-[44px] py-3 text-on-surface font-body-md custom-scrollbar"
                   rows="1"
                   disabled={isLoading}
                 />
