@@ -136,20 +136,22 @@ export async function POST(req) {
       );
     }
 
-    // Se chegou até aqui, a IA respondeu com sucesso. Registramos o consumo.
-    await supabase.from('usuarios').update({
-      consultas_dia: currentDia + 1,
-      data_ref_dia: today,
-      consultas_mes: currentMes + 1,
-      data_ref_mes: today,
-    }).eq('id', user.id);
+    // Se chegou até aqui, a IA respondeu com sucesso. Registramos o consumo apenas se não for a chamada secundária de fontes.
+    if (mode !== 'search-sources') {
+      await supabase.from('usuarios').update({
+        consultas_dia: currentDia + 1,
+        data_ref_dia: today,
+        consultas_mes: currentMes + 1,
+        data_ref_mes: today,
+      }).eq('id', user.id);
 
-    await supabase.from('consultas').insert({
-      usuario_id: user.id,
-      pergunta: userQueryText,
-      categoria: 'chat',
-      modelo: modelName,
-    });
+      await supabase.from('consultas').insert({
+        usuario_id: user.id,
+        pergunta: userQueryText,
+        categoria: 'chat',
+        modelo: modelName,
+      });
+    }
 
     return NextResponse.json(data);
   } catch (error) {
