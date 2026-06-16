@@ -529,7 +529,7 @@ export default function Home() {
       const pdfFilename = `OdontoConforme - Export ${safeEmail} - ${cleanDate} ${cleanTime}.pdf`;
 
       const opt = {
-        margin:       [0.5, 0.5, 0.5, 0.5],
+        margin:       0,
         filename:     pdfFilename,
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true, logging: false },
