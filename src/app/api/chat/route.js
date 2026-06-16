@@ -87,7 +87,7 @@ export async function POST(req) {
     }
 
     const body = await req.json();
-    const { history = [], userQueryText, currentAttachment, systemPrompt, mode } = body;
+    const { history = [], userQueryText, currentAttachment, systemPrompt, mode, conselhoRegional } = body;
 
     const contents = history.map(msg => ({
       role: msg.role === 'user' ? 'user' : 'model',
@@ -138,12 +138,23 @@ export async function POST(req) {
 
     // Se chegou até aqui, a IA respondeu com sucesso. Registramos o consumo apenas se não for a chamada secundária de fontes.
     if (mode !== 'search-sources') {
-      await supabase.from('usuarios').update({
+      const updateData = {
         consultas_dia: currentDia + 1,
         data_ref_dia: today,
         consultas_mes: currentMes + 1,
         data_ref_mes: today,
-      }).eq('id', user.id);
+        ultima_atividade_em: new Date().toISOString()
+      };
+
+      if (!dbUser.primeira_consulta_em) {
+        updateData.primeira_consulta_em = new Date().toISOString();
+      }
+
+      if (conselhoRegional && dbUser.conselho_regional !== conselhoRegional) {
+        updateData.conselho_regional = conselhoRegional;
+      }
+
+      await supabase.from('usuarios').update(updateData).eq('id', user.id);
 
       await supabase.from('consultas').insert({
         usuario_id: user.id,

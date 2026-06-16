@@ -307,7 +307,8 @@ export default function Home() {
           referrer: utmData.referrer,
           headline_variante: utmData.headline_variante,
           documento: cleanCpf,
-          whatsapp: cleanWhatsapp
+          whatsapp: cleanWhatsapp,
+          email: authEmail
         })
         .eq('id', signUpData.user.id);
         
@@ -325,7 +326,8 @@ export default function Home() {
              consentimento_data: new Date().toISOString(),
              consentimento_ip: ipData.ip || '0.0.0.0',
              documento: cleanCpf,
-             whatsapp: cleanWhatsapp
+             whatsapp: cleanWhatsapp,
+             email: authEmail
           }]);
         }
       }
@@ -394,6 +396,7 @@ export default function Home() {
       consentimento_versao: 'v1.0',
       consentimento_data: new Date().toISOString(),
       consentimento_ip: ipData.ip || '0.0.0.0',
+      email: session?.user?.email || null,
     }).eq('id', dbUser.id).select().single();
 
     if (updateError) {
@@ -545,7 +548,8 @@ export default function Home() {
         userQueryText: userQueryText,
         systemPrompt: systemPrompt,
         currentAttachment: currentAttachment,
-        mode: 'fast-answer'
+        mode: 'fast-answer',
+        conselhoRegional: selectedUF
       };
 
       const resultFast = await fetchWithRetry(url, {
@@ -574,7 +578,8 @@ export default function Home() {
         userQueryText: userQueryText,
         systemPrompt: systemPrompt,
         currentAttachment: currentAttachment,
-        mode: 'search-sources'
+        mode: 'search-sources',
+        conselhoRegional: selectedUF
       };
 
       try {
