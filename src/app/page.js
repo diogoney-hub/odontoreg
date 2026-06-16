@@ -126,6 +126,14 @@ export default function Home() {
       if (modeParam === 'register' || modeParam === 'cadastrar') {
         setAuthMode('register');
       }
+
+      const checkoutParam = searchParams.get('checkout');
+      if (checkoutParam) {
+        localStorage.setItem('pendingCheckout', checkoutParam);
+        if (!session) {
+          setAuthMode('register');
+        }
+      }
     }
 
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -155,11 +163,19 @@ export default function Home() {
       setStatus("authenticated");
     } else {
       setDbUser(data);
+      
+      if (typeof window !== 'undefined') {
+        const pendingCheckout = localStorage.getItem('pendingCheckout');
+        if (pendingCheckout && data.documento && data.whatsapp) {
+          localStorage.removeItem('pendingCheckout');
+          handleDirectCheckout(pendingCheckout, data.documento, data.whatsapp);
+        }
+      }
+
       const savedCro = localStorage.getItem('saved_cro');
       if (savedCro) {
         setSelectedUF(savedCro);
         setRememberCro(true);
-        // Só avança para o chat se a tela atual for de onboarding
         setStep(prev => prev === 'onboarding' ? 'chat' : prev);
       }
       setStatus("authenticated");
@@ -182,14 +198,48 @@ export default function Home() {
     setAuthError("");
     setAuthSuccess("");
     setAuthLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data: { user }, error } = await supabase.auth.signInWithPassword({
       email: authEmail,
       password: authPassword,
     });
-    if (error) setAuthError("Email ou senha inválidos.");
+    if (user) {
+      setDbUser(user);
+      
+      // Auto-Checkout Logic se o usuário já tem os dados
+      if (typeof window !== 'undefined') {
+        const pendingCheckout = localStorage.getItem('pendingCheckout');
+        if (pendingCheckout && user.documento && user.whatsapp) {
+          localStorage.removeItem('pendingCheckout');
+          handleDirectCheckout(pendingCheckout, user.documento, user.whatsapp);
+        }
+      }
+    } else {
+      setDbUser(null);
+    }
     setAuthLoading(false);
   };
   
+  const handleDirectCheckout = async (plano, cpfData, whatsappData) => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/checkout', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cpf: cpfData, whatsapp: whatsappData, plano })
+      });
+      const data = await res.json();
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else {
+        alert('Erro: ' + (data.error || 'Não foi possível gerar a cobrança.'));
+        setIsLoading(false);
+      }
+    } catch (err) {
+      alert('Erro de conexão com o banco.');
+      setIsLoading(false);
+    }
+  };
+
   const handleSignUpEmail = async (e) => {
     e.preventDefault();
     if (!authPerfil) {
@@ -354,6 +404,13 @@ export default function Home() {
       }
     } else {
       setDbUser(updatedUser);
+      if (typeof window !== 'undefined') {
+        const pendingCheckout = localStorage.getItem('pendingCheckout');
+        if (pendingCheckout) {
+          localStorage.removeItem('pendingCheckout');
+          handleDirectCheckout(pendingCheckout, cleanCpf, cleanWhatsapp);
+        }
+      }
     }
     setAuthLoading(false);
   };

@@ -32,7 +32,7 @@ export async function POST(request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { cpf, plano, whatsapp } = body;
+    let { cpf, plano, whatsapp } = body;
 
     // Definição dos Preços Base
     let valorAssinatura = 0;
