@@ -479,12 +479,14 @@ export default function Home() {
       });
 
       const container = document.createElement('div');
-      container.style.position = 'absolute';
-      container.style.left = '-9999px';
-      container.style.top = '-9999px';
+      container.style.position = 'fixed';
+      container.style.left = '0';
+      container.style.top = '0';
+      container.style.width = '794px';
+      container.style.zIndex = '-9999';
       
       container.innerHTML = `
-        <div style="font-family: 'Inter', sans-serif; background-color: #ffffff; padding: 40px; width: 690px; color: #1c1c1c; box-sizing: border-box;">
+        <div style="font-family: 'Inter', sans-serif; background-color: #ffffff; padding: 40px; width: 794px; color: #1c1c1c; box-sizing: border-box;">
           
           <!-- Header Section -->
           <div style="text-align: center; border-bottom: 1px solid #bec9c0; padding-bottom: 32px; margin-bottom: 32px;">
@@ -530,7 +532,7 @@ export default function Home() {
         margin:       [0.5, 0.5, 0.5, 0.5],
         filename:     pdfFilename,
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false, windowWidth: 690 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
         jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
         enableLinks:  true
       };
