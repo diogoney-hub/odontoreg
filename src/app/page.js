@@ -486,7 +486,7 @@ export default function Home() {
       container.style.zIndex = '-9999';
       
       container.innerHTML = `
-        <div style="font-family: 'Inter', sans-serif; background-color: #ffffff; padding: 40px; width: 794px; color: #1c1c1c; box-sizing: border-box;">
+        <div style="font-family: 'Inter', sans-serif; background-color: #ffffff; padding: 0 40px; width: 794px; color: #1c1c1c; box-sizing: border-box;">
           
           <!-- Header Section -->
           <div style="text-align: center; border-bottom: 1px solid #bec9c0; padding-bottom: 32px; margin-bottom: 32px;">
@@ -529,11 +529,12 @@ export default function Home() {
       const pdfFilename = `OdontoConforme - Export ${safeEmail} - ${cleanDate} ${cleanTime}.pdf`;
 
       const opt = {
-        margin:       0,
+        margin:       [0.5, 0, 0.5, 0],
         filename:     pdfFilename,
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true, logging: false },
         jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
+        pagebreak:    { mode: 'css', avoid: 'p, li, h1, h2, h3, h4, img, span' },
         enableLinks:  true
       };
 
