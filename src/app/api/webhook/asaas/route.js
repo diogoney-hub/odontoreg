@@ -58,6 +58,14 @@ export async function POST(request) {
     const oldStatus = dbUser.status_assinatura;
     let newStatus = oldStatus;
 
+    // Identificar o plano pago através da descrição ou do valor
+    let planoInferido = oldStatus || 'essencial'; // fallback
+    if (payment.value == 39.00 || (payment.description && payment.description.toLowerCase().includes('completo'))) {
+      planoInferido = 'completo';
+    } else if (payment.value == 29.00 || (payment.description && payment.description.toLowerCase().includes('essencial'))) {
+      planoInferido = 'essencial';
+    }
+
     // REGRA 10: Regra de Ouro do Acesso
     // Somente pagamentos CONFIRMADOS/RECEBIDOS atualizam para 'ativo'
     if (event === 'PAYMENT_RECEIVED' || event === 'PAYMENT_CONFIRMED') {
@@ -76,6 +84,7 @@ export async function POST(request) {
       metodo: payment.billingType,
       data_vencimento: payment.dueDate,
       data_pagamento: payment.paymentDate ? new Date(payment.paymentDate).toISOString() : null,
+      plano: planoInferido // Grava o plano na fatura
     }, { onConflict: 'asaas_payment_id' });
     if (pagError) throw new Error('Erro ao salvar pagamento no banco: ' + pagError.message);
 
@@ -84,23 +93,23 @@ export async function POST(request) {
       usuario_id: userId,
       tipo_evento: event,
       origem: `webhook_${eventId}`, // chave de idempotência
-      plano_anterior: oldStatus,
-      plano_novo: newStatus
+      plano_anterior: dbUser.plano_atual || oldStatus,
+      plano_novo: planoInferido
     });
     if (evtError) throw new Error('Erro ao salvar o log do evento: ' + evtError.message);
 
-    // 3. Finalmente, atualizar o status principal de liberação de acesso do usuário (se houver mudança)
-    if (oldStatus !== newStatus) {
+    // 3. Finalmente, atualizar o status principal de liberação de acesso do usuário e seu plano_atual
+    if (oldStatus !== newStatus || dbUser.plano_atual !== planoInferido) {
       const { error: updError } = await supabase
         .from('usuarios')
-        .update({ status_assinatura: newStatus })
+        .update({ status_assinatura: newStatus, plano_atual: planoInferido })
         .eq('id', userId);
-      if (updError) throw new Error('Erro ao atualizar status_assinatura do usuário: ' + updError.message);
+      if (updError) throw new Error('Erro ao atualizar status e plano do usuário: ' + updError.message);
     }
     
-    console.log(`[Webhook Asaas] Sucesso! Evento ${event} processado. Status de ${dbUser.id} agora é ${newStatus}.`);
+    console.log(`[Webhook Asaas] Sucesso! Evento ${event} processado. Status de ${dbUser.id} agora é ${newStatus} no plano ${planoInferido}.`);
 
-    return new Response(JSON.stringify({ success: true, status: newStatus }), { status: 200 });
+    return new Response(JSON.stringify({ success: true, status: newStatus, plano: planoInferido }), { status: 200 });
 
   } catch (error) {
     console.error('Erro no Webhook Asaas:', error);
