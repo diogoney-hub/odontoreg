@@ -426,10 +426,83 @@ export default function Home() {
   const [errorMsg, setErrorMsg] = useState('');
   const messagesEndRef = useRef(null);
 
-  const exportToPDF = (elementId, filename) => {
-    // Para contornar a incompatibilidade do html2canvas com as cores modernas do Tailwind v4 (oklch),
-    // acionamos a função nativa de impressão do navegador, que gera um PDF perfeito e suporta todas as cores nativamente.
-    window.print();
+  const exportToPDF = async (elementId, filename) => {
+    setIsLoading(true);
+    try {
+      const html2pdf = (await import('html2pdf.js')).default;
+      
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('pt-BR');
+      const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      
+      const userName = dbUser?.nome_completo || session?.user?.name || 'Usuário';
+      const userEmail = dbUser?.email || session?.user?.email || '';
+
+      const msgElement = document.getElementById(elementId);
+      let htmlContent = '';
+      if (msgElement) {
+        const contentDiv = msgElement.querySelector('.bg-surface-bright') || msgElement;
+        const clone = contentDiv.cloneNode(true);
+        // Remover botões e SVGs de UI que não devem ir pro PDF
+        clone.querySelectorAll('button').forEach(btn => btn.remove());
+        htmlContent = clone.innerHTML;
+      }
+
+      const container = document.createElement('div');
+      container.style.position = 'absolute';
+      container.style.left = '-9999px';
+      container.style.top = '-9999px';
+      
+      container.innerHTML = `
+        <div style="font-family: 'Inter', sans-serif; background-color: #f9fafb; padding: 40px; width: 800px; color: #1c1c1c; box-sizing: border-box;">
+          
+          <!-- Card 1: Logo -->
+          <div style="background-color: #ffffff; padding: 24px; border-radius: 12px; margin-bottom: 24px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <img src="/logo.png" style="height: 48px; margin: 0 auto; display: block;" />
+          </div>
+          
+          <!-- Card 2: Dados do Usuário -->
+          <div style="background-color: #ffffff; padding: 24px; border-radius: 12px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <p style="margin: 0 0 8px 0; font-size: 14px; color: #4b5563;"><strong>Nome:</strong> <span style="color: #111827;">${userName}</span></p>
+            <p style="margin: 0 0 8px 0; font-size: 14px; color: #4b5563;"><strong>E-mail:</strong> <span style="color: #111827;">${userEmail}</span></p>
+            <p style="margin: 0; font-size: 14px; color: #4b5563;"><strong>Data e Hora:</strong> <span style="color: #111827;">${dateStr} às ${timeStr}</span></p>
+          </div>
+          
+          <!-- Card 3: Consulta (Fonte Inter 10, Line-height 1.15) -->
+          <div style="background-color: #ffffff; padding: 32px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-size: 10px; line-height: 1.15; color: #1f2937;">
+            ${htmlContent}
+          </div>
+          
+        </div>
+      `;
+      document.body.appendChild(container);
+
+      const responseDiv = container.children[0].children[2];
+      const paragraphs = responseDiv.querySelectorAll('p');
+      paragraphs.forEach(p => { p.style.marginBottom = '12px'; p.style.marginTop = '0'; });
+      const uls = responseDiv.querySelectorAll('ul, ol');
+      uls.forEach(ul => { ul.style.paddingLeft = '20px'; ul.style.marginBottom = '12px'; });
+      const lis = responseDiv.querySelectorAll('li');
+      lis.forEach(li => { li.style.marginBottom = '4px'; });
+      const headings = responseDiv.querySelectorAll('h1, h2, h3');
+      headings.forEach(h => { h.style.marginTop = '16px'; h.style.marginBottom = '12px'; h.style.color = '#111827'; });
+
+      const opt = {
+        margin:       [0.5, 0.5, 0.5, 0.5],
+        filename:     filename || 'OdontoConforme-Consulta.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+
+      await html2pdf().set(opt).from(container.firstElementChild).save();
+      
+      document.body.removeChild(container);
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+      alert("Não foi possível gerar o PDF no momento.");
+    }
+    setIsLoading(false);
   };
 
   const scrollToBottom = () => {
