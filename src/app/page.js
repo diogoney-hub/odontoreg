@@ -426,7 +426,7 @@ export default function Home() {
   const [errorMsg, setErrorMsg] = useState('');
   const messagesEndRef = useRef(null);
 
-  const exportToPDF = async (elementId, filename) => {
+  const exportToPDF = async () => {
     setIsLoading(true);
     try {
       const html2pdf = (await import('html2pdf.js')).default;
@@ -438,15 +438,45 @@ export default function Home() {
       const userName = dbUser?.nome_completo || session?.user?.name || 'Usuário';
       const userEmail = dbUser?.email || session?.user?.email || '';
 
-      const msgElement = document.getElementById(elementId);
-      let htmlContent = '';
-      if (msgElement) {
-        const contentDiv = msgElement.querySelector('.bg-surface-bright') || msgElement;
-        const clone = contentDiv.cloneNode(true);
-        // Remover botões e SVGs de UI que não devem ir pro PDF
-        clone.querySelectorAll('button').forEach(btn => btn.remove());
-        htmlContent = clone.innerHTML;
-      }
+      let conversationHtml = '';
+      messages.forEach(msg => {
+        const msgElement = document.getElementById(`msg-${msg.id}`);
+        let contentHtml = '';
+        if (msgElement) {
+           const contentDiv = msgElement.querySelector('.bg-surface-bright') || msgElement.querySelector('.bg-surface-variant') || msgElement;
+           const clone = contentDiv.cloneNode(true);
+           clone.querySelectorAll('button').forEach(btn => btn.remove());
+           contentHtml = clone.innerHTML;
+        } else {
+           contentHtml = `<p>${msg.text}</p>`;
+        }
+
+        if (msg.role === 'user') {
+           conversationHtml += `
+            <div style="margin-bottom: 24px;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                <span style="font-family: 'Inter Tight', sans-serif; font-size: 13px; font-weight: 600; color: #1a1c1c; background-color: #eeeeee; padding: 4px 12px; border-radius: 9999px;">${userName}</span>
+              </div>
+              <div style="padding-left: 16px; border-left: 2px solid #e2e2e2; color: #1a1c1c; font-size: 10pt; line-height: 1.15;">
+                ${contentHtml}
+              </div>
+            </div>
+           `;
+        } else {
+           conversationHtml += `
+            <div style="margin-bottom: 24px; margin-top: 8px;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                <span style="font-family: 'Inter Tight', sans-serif; font-size: 13px; font-weight: 600; color: #ffffff; background-color: #005f3e; padding: 4px 12px; border-radius: 9999px; display: flex; align-items: center; gap: 4px;">
+                  Assistente OdontoConforme
+                </span>
+              </div>
+              <div style="background-color: rgba(216, 230, 222, 0.3); border: 1px solid rgba(190, 201, 192, 0.5); border-radius: 8px; padding: 20px; color: #1a1c1c; font-size: 10pt; line-height: 1.15;">
+                ${contentHtml}
+              </div>
+            </div>
+           `;
+        }
+      });
 
       const container = document.createElement('div');
       container.style.position = 'absolute';
@@ -454,48 +484,68 @@ export default function Home() {
       container.style.top = '-9999px';
       
       container.innerHTML = `
-        <div style="font-family: 'Inter', sans-serif; background-color: #f9fafb; padding: 40px; width: 800px; color: #1c1c1c; box-sizing: border-box;">
+        <div style="font-family: 'Inter', sans-serif; background-color: #ffffff; padding: 40px; width: 800px; color: #1c1c1c; box-sizing: border-box;">
           
-          <!-- Card 1: Logo -->
-          <div style="background-color: #ffffff; padding: 24px; border-radius: 12px; margin-bottom: 24px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-            <img src="/logo.png" style="height: 48px; margin: 0 auto; display: block;" />
+          <!-- Header Section -->
+          <div style="text-align: center; border-bottom: 1px solid #bec9c0; padding-bottom: 32px; margin-bottom: 32px;">
+            <img src="/logo.png" style="height: 64px; margin: 0 auto 24px auto; display: block;" />
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; width: 100%; text-align: left;">
+              <div>
+                <h1 style="margin: 0; font-size: 32px; font-weight: 600; line-height: 1.2;">${userName}</h1>
+                <p style="margin: 4px 0 0 0; font-size: 16px; color: #3f4942;">${userEmail}</p>
+              </div>
+              <div style="text-align: right;">
+                <span style="font-family: 'Inter Tight', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.05em; color: #54615b; text-transform: uppercase;">Detalhes da Exportação</span>
+                <p style="margin: 4px 0 0 0; font-size: 14px; color: #3f4942;">Gerado em: ${dateStr} às ${timeStr}</p>
+              </div>
+            </div>
           </div>
           
-          <!-- Card 2: Dados do Usuário -->
-          <div style="background-color: #ffffff; padding: 24px; border-radius: 12px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-            <p style="margin: 0 0 8px 0; font-size: 14px; color: #4b5563;"><strong>Nome:</strong> <span style="color: #111827;">${userName}</span></p>
-            <p style="margin: 0 0 8px 0; font-size: 14px; color: #4b5563;"><strong>E-mail:</strong> <span style="color: #111827;">${userEmail}</span></p>
-            <p style="margin: 0; font-size: 14px; color: #4b5563;"><strong>Data e Hora:</strong> <span style="color: #111827;">${dateStr} às ${timeStr}</span></p>
-          </div>
-          
-          <!-- Card 3: Consulta (Fonte Inter 10, Line-height 1.15) -->
-          <div style="background-color: #ffffff; padding: 32px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-size: 10px; line-height: 1.15; color: #1f2937;">
-            ${htmlContent}
+          <!-- Content Section -->
+          <div style="width: 100%;">
+            <h2 style="font-size: 24px; font-weight: 600; color: #005f3e; margin: 0 0 16px 0;">Histórico de Consulta</h2>
+            ${conversationHtml}
           </div>
           
         </div>
       `;
       document.body.appendChild(container);
 
-      const responseDiv = container.children[0].children[2];
-      const paragraphs = responseDiv.querySelectorAll('p');
-      paragraphs.forEach(p => { p.style.marginBottom = '12px'; p.style.marginTop = '0'; });
-      const uls = responseDiv.querySelectorAll('ul, ol');
-      uls.forEach(ul => { ul.style.paddingLeft = '20px'; ul.style.marginBottom = '12px'; });
-      const lis = responseDiv.querySelectorAll('li');
+      const contentSection = container.children[0].children[1];
+      const paragraphs = contentSection.querySelectorAll('p');
+      paragraphs.forEach(p => { p.style.marginBottom = '12px'; p.style.marginTop = '0'; p.style.fontSize = '10pt'; p.style.lineHeight = '1.15'; });
+      const uls = contentSection.querySelectorAll('ul, ol');
+      uls.forEach(ul => { ul.style.paddingLeft = '20px'; ul.style.marginBottom = '12px'; ul.style.fontSize = '10pt'; ul.style.lineHeight = '1.15'; });
+      const lis = contentSection.querySelectorAll('li');
       lis.forEach(li => { li.style.marginBottom = '4px'; });
-      const headings = responseDiv.querySelectorAll('h1, h2, h3');
+      const headings = contentSection.querySelectorAll('h1, h2, h3, h4');
       headings.forEach(h => { h.style.marginTop = '16px'; h.style.marginBottom = '12px'; h.style.color = '#111827'; });
+
+      const safeEmail = userEmail ? userEmail.split('@')[0] : 'usuario';
+      const cleanDate = dateStr.replace(/\\//g, '-');
+      const cleanTime = timeStr.replace(':', 'h');
+      const pdfFilename = \`OdontoConforme - Export \${safeEmail} - \${cleanDate} \${cleanTime}.pdf\`;
 
       const opt = {
         margin:       [0.5, 0.5, 0.5, 0.5],
-        filename:     filename || 'OdontoConforme-Consulta.pdf',
+        filename:     pdfFilename,
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true, logging: false },
-        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
+        enableLinks:  true
       };
 
-      await html2pdf().set(opt).from(container.firstElementChild).save();
+      await html2pdf().set(opt).from(container.firstElementChild).toPdf().get('pdf').then(function (pdf) {
+        var totalPages = pdf.internal.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+          pdf.setPage(i);
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(9);
+          pdf.setTextColor(150);
+          pdf.text('OdontoConforme - Consulta de Conformidade Regulatória', 0.5, pdf.internal.pageSize.getHeight() - 0.3);
+          pdf.text(i + ' / ' + totalPages, pdf.internal.pageSize.getWidth() - 0.8, pdf.internal.pageSize.getHeight() - 0.3);
+        }
+      }).save();
       
       document.body.removeChild(container);
     } catch (error) {
@@ -1220,9 +1270,9 @@ export default function Home() {
                     )}
                     {msg.role === 'model' && !msg.isError && !msg.isSearchingSources && (
                       <button 
-                        onClick={() => exportToPDF(`msg-${msg.id}`, 'odontoconforme-resposta.pdf')}
+                        onClick={() => exportToPDF()}
                         className="mt-2 flex items-center gap-2 text-body-sm font-medium text-on-surface-variant hover:text-primary transition-colors"
-                        title="Exportar esta resposta em PDF"
+                        title="Exportar histórico da consulta em PDF"
                       >
                         <span className="material-symbols-outlined text-[16px]">download</span> Exportar Resposta
                       </button>
