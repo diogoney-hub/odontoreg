@@ -522,9 +522,9 @@ export default function Home() {
       headings.forEach(h => { h.style.marginTop = '16px'; h.style.marginBottom = '12px'; h.style.color = '#111827'; });
 
       const safeEmail = userEmail ? userEmail.split('@')[0] : 'usuario';
-      const cleanDate = dateStr.replace(/\\//g, '-');
+      const cleanDate = dateStr.replace(/\//g, '-');
       const cleanTime = timeStr.replace(':', 'h');
-      const pdfFilename = \`OdontoConforme - Export \${safeEmail} - \${cleanDate} \${cleanTime}.pdf\`;
+      const pdfFilename = `OdontoConforme - Export ${safeEmail} - ${cleanDate} ${cleanTime}.pdf`;
 
       const opt = {
         margin:       [0.5, 0.5, 0.5, 0.5],
