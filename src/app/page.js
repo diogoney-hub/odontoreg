@@ -484,7 +484,7 @@ export default function Home() {
       container.style.top = '-9999px';
       
       container.innerHTML = `
-        <div style="font-family: 'Inter', sans-serif; background-color: #ffffff; padding: 40px; width: 800px; color: #1c1c1c; box-sizing: border-box;">
+        <div style="font-family: 'Inter', sans-serif; background-color: #ffffff; padding: 40px; width: 794px; color: #1c1c1c; box-sizing: border-box;">
           
           <!-- Header Section -->
           <div style="text-align: center; border-bottom: 1px solid #bec9c0; padding-bottom: 32px; margin-bottom: 32px;">
@@ -530,7 +530,7 @@ export default function Home() {
         margin:       [0.5, 0.5, 0.5, 0.5],
         filename:     pdfFilename,
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        html2canvas:  { scale: 2, useCORS: true, logging: false, windowWidth: 794 },
         jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
         enableLinks:  true
       };
