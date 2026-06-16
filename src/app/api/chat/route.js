@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 export async function GET(req) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -20,6 +22,70 @@ export async function POST(req) {
   }
 
   try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              )
+            } catch {}
+          },
+        },
+      }
+    );
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
+    const { data: dbUser } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
+    if (!dbUser) {
+      return NextResponse.json({ error: 'Usuário não encontrado no banco de dados' }, { status: 404 });
+    }
+
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const thisMonth = today.substring(0, 7);
+    
+    let currentDia = dbUser.data_ref_dia === today ? (dbUser.consultas_dia || 0) : 0;
+    let currentMes = dbUser.data_ref_mes?.startsWith(thisMonth) ? (dbUser.consultas_mes || 0) : 0;
+    
+    let limitDia = Infinity;
+    let limitMes = Infinity;
+    
+    if (dbUser.status_assinatura === 'trial') {
+        const trialEndDate = dbUser.trial_fim 
+          ? new Date(dbUser.trial_fim) 
+          : new Date(new Date(dbUser.criado_em).getTime() + 7 * 24 * 60 * 60 * 1000);
+        if (new Date() > trialEndDate) {
+          return NextResponse.json({ error: 'Seu período de teste gratuito de 7 dias chegou ao fim.' }, { status: 403 });
+        }
+        limitMes = 10;
+    } else if (dbUser.status_assinatura === 'ativo') {
+        const planoAtual = dbUser.plano_atual || 'essencial';
+        if (planoAtual === 'essencial') {
+           limitDia = 30; limitMes = 300;
+        } else if (planoAtual === 'completo') {
+           limitDia = 50; limitMes = 750;
+        }
+    } else {
+        return NextResponse.json({ error: 'Sua assinatura está inativa ou pendente.' }, { status: 403 });
+    }
+
+    if (currentDia >= limitDia || currentMes >= limitMes) {
+        return NextResponse.json({ error: `Limite de consultas alcançado. Você excedeu sua cota ${currentDia >= limitDia ? 'diária' : 'mensal'}.` }, { status: 403 });
+    }
+
     const body = await req.json();
     const { history = [], userQueryText, currentAttachment, systemPrompt, mode } = body;
 
@@ -31,7 +97,6 @@ export async function POST(req) {
     const currentParts = [{ text: userQueryText }];
     
     if (currentAttachment) {
-      // Pega apenas o Base64 ignorando o cabeçalho 'data:image/png;base64,' ou 'data:application/pdf;base64,'
       const base64Data = currentAttachment.base64.split(',')[1];
       currentParts.push({
         inlineData: {
@@ -48,14 +113,10 @@ export async function POST(req) {
       systemInstruction: { parts: [{ text: systemPrompt }] },
     };
 
-    // Só adiciona a pesquisa no Google se o modo não for explicitamente "fast-answer"
-    // E desativa o Google Search se houver um anexo (PDF/Imagem), pois a API do Gemini pode rejeitar a combinação.
     if (mode !== 'fast-answer' && !currentAttachment) {
       payload.tools = [{ googleSearch: {} }];
     }
 
-    // Se tiver anexo (imagem), usamos o gemini-2.5-flash que é nativamente multimodal
-    // Caso contrário, usamos o gemini-flash-lite-latest que é o mais rápido
     const modelName = currentAttachment ? 'gemini-2.5-flash' : 'gemini-flash-lite-latest';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
@@ -74,6 +135,21 @@ export async function POST(req) {
         { status: 502 } 
       );
     }
+
+    // Se chegou até aqui, a IA respondeu com sucesso. Registramos o consumo.
+    await supabase.from('usuarios').update({
+      consultas_dia: currentDia + 1,
+      data_ref_dia: today,
+      consultas_mes: currentMes + 1,
+      data_ref_mes: today,
+    }).eq('id', user.id);
+
+    await supabase.from('consultas').insert({
+      usuario_id: user.id,
+      pergunta: userQueryText,
+      categoria: 'chat',
+      modelo: modelName,
+    });
 
     return NextResponse.json(data);
   } catch (error) {

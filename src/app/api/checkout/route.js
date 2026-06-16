@@ -50,6 +50,13 @@ export async function POST(request) {
       return new Response(JSON.stringify({ error: 'Chave do Asaas não configurada' }), { status: 500 });
     }
 
+    // 1. Buscar usuário no BD para ver se já tem asaas_customer_id, documento e whatsapp
+    const { data: dbUser } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
+    let customerId = dbUser?.asaas_customer_id;
+
+    if (!cpf && dbUser?.documento) cpf = dbUser.documento;
+    if (!whatsapp && dbUser?.whatsapp) whatsapp = dbUser.whatsapp;
+
     if (!cpf) {
       return new Response(JSON.stringify({ error: 'CPF é obrigatório para assinar' }), { status: 400 });
     }
@@ -57,10 +64,6 @@ export async function POST(request) {
     if (!whatsapp) {
       return new Response(JSON.stringify({ error: 'WhatsApp é obrigatório para contato' }), { status: 400 });
     }
-
-    // 1. Buscar usuário no BD para ver se já tem asaas_customer_id
-    const { data: dbUser } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
-    let customerId = dbUser?.asaas_customer_id;
 
     // 2. Cria ou Atualiza o Cliente no Asaas com o CPF
     if (!customerId) {

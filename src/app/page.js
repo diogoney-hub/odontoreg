@@ -43,14 +43,24 @@ const fetchWithRetry = async (url, options, retries = 3, delay = 1000) => {
   try {
     const response = await fetch(url, options);
     if (!response.ok) {
+      let errorMsg = `Erro na comunicação: ${response.status}`;
       try {
         const errorData = await response.json();
-        console.error("API Error Body:", errorData);
+        if (errorData.error) errorMsg = errorData.error;
       } catch (e) {}
-      throw new Error(`Erro na comunicação: ${response.status}`);
+      
+      // Não repete em caso de limite excedido ou não autorizado
+      if (response.status === 403 || response.status === 401) {
+         const error = new Error(errorMsg);
+         error.status = response.status;
+         throw error;
+      }
+      throw new Error(errorMsg);
     }
     return await response.json();
   } catch (error) {
+    if (error.status === 403 || error.status === 401) throw error; // Stop retry
+    
     if (retries > 0) {
       await new Promise(res => setTimeout(res, delay));
       return fetchWithRetry(url, options, retries - 1, delay * 2);
@@ -80,6 +90,7 @@ export default function Home() {
   const [authPassword, setAuthPassword] = useState("");
   const [authName, setAuthName] = useState("");
   const [authCpf, setAuthCpf] = useState("");
+  const [authWhatsapp, setAuthWhatsapp] = useState("");
   const [authPerfil, setAuthPerfil] = useState("");
   const [authConsentTerms, setAuthConsentTerms] = useState(false);
   const [authConsentMarketing, setAuthConsentMarketing] = useState(false);
@@ -190,6 +201,11 @@ export default function Home() {
       setAuthError("Por favor, insira um CPF válido.");
       return;
     }
+    const cleanWhatsapp = authWhatsapp.replace(/\D/g, '');
+    if (cleanWhatsapp.length < 10) {
+      setAuthError("Por favor, insira um WhatsApp válido com DDD.");
+      return;
+    }
     if (!authConsentTerms) {
       setAuthError("Você deve aceitar os Termos de Uso e Política de Privacidade.");
       return;
@@ -240,7 +256,8 @@ export default function Home() {
           utm_content: utmData.utm_content,
           referrer: utmData.referrer,
           headline_variante: utmData.headline_variante,
-          documento: cleanCpf
+          documento: cleanCpf,
+          whatsapp: cleanWhatsapp
         })
         .eq('id', signUpData.user.id);
         
@@ -257,7 +274,8 @@ export default function Home() {
              consentimento_versao: 'v1.0',
              consentimento_data: new Date().toISOString(),
              consentimento_ip: ipData.ip || '0.0.0.0',
-             documento: cleanCpf
+             documento: cleanCpf,
+             whatsapp: cleanWhatsapp
           }]);
         }
       }
@@ -288,6 +306,56 @@ export default function Home() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
+  };
+
+  const handleCompleteProfile = async (e) => {
+    e.preventDefault();
+    if (!authPerfil) {
+      setAuthError("Selecione seu Perfil de Atuação.");
+      return;
+    }
+    const cleanCpf = authCpf.replace(/\D/g, '');
+    if (cleanCpf.length !== 11) {
+      setAuthError("Por favor, insira um CPF válido.");
+      return;
+    }
+    const cleanWhatsapp = authWhatsapp.replace(/\D/g, '');
+    if (cleanWhatsapp.length < 10) {
+      setAuthError("Por favor, insira um WhatsApp válido com DDD.");
+      return;
+    }
+    if (!authConsentTerms) {
+      setAuthError("Você deve aceitar os Termos de Uso e Política de Privacidade.");
+      return;
+    }
+
+    setAuthError("");
+    setAuthLoading(true);
+
+    const ipFetch = await fetch('https://api.ipify.org?format=json').catch(() => ({ json: () => ({ ip: null }) }));
+    const ipData = await ipFetch.json();
+
+    const { error: updateError, data: updatedUser } = await supabase.from('usuarios').update({
+      documento: cleanCpf,
+      whatsapp: cleanWhatsapp,
+      perfil_atuacao: authPerfil,
+      consentimento_termos: authConsentTerms,
+      consentimento_marketing: authConsentMarketing,
+      consentimento_versao: 'v1.0',
+      consentimento_data: new Date().toISOString(),
+      consentimento_ip: ipData.ip || '0.0.0.0',
+    }).eq('id', dbUser.id).select().single();
+
+    if (updateError) {
+      if (updateError.code === '23505') {
+         setAuthError("Este CPF já está cadastrado em outra conta.");
+      } else {
+         setAuthError("Erro ao salvar perfil. Tente novamente.");
+      }
+    } else {
+      setDbUser(updatedUser);
+    }
+    setAuthLoading(false);
   };
   
   const [attachment, setAttachment] = useState(null); 
@@ -389,60 +457,6 @@ export default function Home() {
     setIsLoading(true);
     setErrorMsg('');
 
-    // Passo 5: Lógica de Limites e Registro de Consultas
-    if (dbUser) {
-      const now = new Date();
-      const today = now.toISOString().split('T')[0];
-      const thisMonth = today.substring(0, 7); // ex: "2026-06"
-      
-      let currentDia = dbUser.data_ref_dia === today ? (dbUser.consultas_dia || 0) : 0;
-      let currentMes = dbUser.data_ref_mes?.startsWith(thisMonth) ? (dbUser.consultas_mes || 0) : 0;
-      
-      // Definição dos Limites por Plano
-      let limitDia = Infinity;
-      let limitMes = Infinity;
-      if (dbUser.status_assinatura === 'trial') {
-          limitMes = 10;
-      } else if (dbUser.status_assinatura === 'ativo') {
-          // Precisamos descobrir o plano dele atual (Essencial ou Completo)
-          const planoAtual = dbUser.plano_atual || 'essencial';
-          if (planoAtual === 'essencial') {
-             limitDia = 30; limitMes = 300;
-          } else if (planoAtual === 'completo') {
-             limitDia = 50; limitMes = 750;
-          }
-      }
-
-      if (currentDia >= limitDia || currentMes >= limitMes) {
-          alert(`Limite alcançado! Você consumiu sua cota ${currentDia >= limitDia ? 'diária' : 'mensal'}. Por favor, aguarde o reset do período ou vá em "Minha Conta" para realizar o Upgrade.`);
-          setIsLoading(false);
-          setInputText(currentInputText); // devolve o texto
-          setAttachment(currentAttachment);
-          return;
-      }
-
-      currentDia++;
-      currentMes++;
-
-      // Atualiza o perfil (Contadores)
-      const { data: updatedUser } = await supabase.from('usuarios').update({
-        consultas_dia: currentDia,
-        data_ref_dia: today,
-        consultas_mes: currentMes,
-        data_ref_mes: today,
-      }).eq('id', dbUser.id).select().single();
-
-      if (updatedUser) setDbUser(updatedUser);
-
-      // Grava o Log da Consulta
-      await supabase.from('consultas').insert({
-        usuario_id: dbUser.id,
-        pergunta: currentInputText,
-        categoria: 'chat',
-        modelo: 'gemini-1.5-flash',
-      });
-    }
-
     const systemPrompt = `Você é um assistente jurídico e ético especializado em odontologia no Brasil. Deve possuir todos os conhecimentos nas regras, normas, leis, orientações e atribuições do CFO (Conselho Federal de Odontologia) e de todos os Conselhos Regionais (CRO). 
     Seu objetivo é ajudar dentistas a entenderem as regras e orientações do CFO (Conselho Federal de Odontologia) e dos Conselhos Regionais (CRO).
     Diretrizes obrigatórias:
@@ -535,12 +549,19 @@ export default function Home() {
 
     } catch (error) {
       console.error(error);
-      setMessages(prev => [...prev, {
-        id: Date.now() + 1,
-        role: 'model',
-        text: "Houve um problema de conexão ao consultar as bases de dados ou processar a imagem. Tente novamente em alguns segundos.",
-        isError: true
-      }]);
+      
+      if (error.status === 403) {
+        alert(error.message || "Limite alcançado! Por favor, vá em 'Minha Conta' para realizar o Upgrade.");
+        setInputText(currentInputText); 
+        setAttachment(currentAttachment);
+      } else {
+        setMessages(prev => [...prev, {
+          id: Date.now() + 1,
+          role: 'model',
+          text: "Houve um problema de conexão ao consultar as bases de dados ou processar a imagem. Tente novamente em alguns segundos.",
+          isError: true
+        }]);
+      }
       setIsLoading(false);
     }
   };
@@ -626,6 +647,10 @@ export default function Home() {
                 <input type="text" required value={authCpf} onChange={e => setAuthCpf(e.target.value.replace(/\D/g, ''))} maxLength={11} placeholder="Apenas números" className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-green" />
               </div>
               <div>
+                <label className="block text-sm font-medium text-brand-text-secondary mb-1">WhatsApp</label>
+                <input type="tel" required value={authWhatsapp} onChange={e => setAuthWhatsapp(e.target.value.replace(/\D/g, ''))} maxLength={11} placeholder="DDD + Número (Apenas números)" className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-green" />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-brand-text-secondary mb-1">E-mail</label>
                 <input type="email" required value={authEmail} onChange={e => setAuthEmail(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-green" />
               </div>
@@ -702,6 +727,73 @@ export default function Home() {
         <p className="mt-[48px] text-[12px] text-brand-text-muted flex items-center justify-center gap-2 max-w-md mx-auto">
           <Shield className="w-4 h-4 flex-shrink-0" /> Privacidade Garantida: Nenhum documento ou consulta é exposto a terceiros.
         </p>
+      </div>
+    );
+  }
+
+  // Lógica de Perfil Incompleto (Google Login)
+  const needsCompleteProfile = status === "authenticated" && dbUser && (!dbUser.documento || !dbUser.whatsapp || !dbUser.perfil_atuacao);
+
+  if (needsCompleteProfile) {
+    return (
+      <div className="min-h-screen bg-brand-bg-primary text-brand-text-primary flex flex-col justify-center items-center p-6 text-center font-inter">
+        <div className="mb-[24px] max-w-[250px]">
+          <img src="/logo.png" alt="OdontoConforme" className="w-full h-auto object-contain" />
+        </div>
+        
+        <div className="w-full max-w-md bg-brand-bg-secondary p-8 rounded-xl shadow-lg border border-gray-200">
+          <h2 className="text-xl font-bold mb-4">Complete seu Cadastro</h2>
+          <p className="text-sm text-brand-text-secondary mb-6">Para usar o sistema de consultas, precisamos de algumas informações finais da sua conta.</p>
+
+          {authError && (
+            <div className="mb-4 p-3 bg-red-50 text-red-600 rounded text-sm text-left border border-red-100 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              {authError}
+            </div>
+          )}
+
+          <form onSubmit={handleCompleteProfile} className="space-y-4 text-left">
+            <div>
+              <label className="block text-sm font-medium text-brand-text-secondary mb-1">CPF</label>
+              <input type="text" required value={authCpf} onChange={e => setAuthCpf(e.target.value.replace(/\D/g, ''))} maxLength={11} placeholder="Apenas números" className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-green" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-brand-text-secondary mb-1">WhatsApp</label>
+              <input type="tel" required value={authWhatsapp} onChange={e => setAuthWhatsapp(e.target.value.replace(/\D/g, ''))} maxLength={11} placeholder="DDD + Número (Apenas números)" className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-green" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-brand-text-secondary mb-1">Perfil de Atuação</label>
+              <select required value={authPerfil} onChange={e => setAuthPerfil(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-green bg-white">
+                <option value="" disabled>Selecione seu perfil principal...</option>
+                <option value="dono/sócio">Dono / Sócio de Clínica</option>
+                <option value="autônomo">Dentista Autônomo</option>
+                <option value="contratado">Dentista Contratado</option>
+                <option value="gestão (mkt)">Gestão / Marketing</option>
+                <option value="gestão (admin/jurídico)">Gestão / Admin / Jurídico</option>
+                <option value="estudante">Estudante de Odontologia</option>
+                <option value="outros">Outros</option>
+              </select>
+            </div>
+            <div className="flex items-start gap-2 pt-2">
+              <input type="checkbox" id="termsProfile" required checked={authConsentTerms} onChange={e => setAuthConsentTerms(e.target.checked)} className="mt-1" />
+              <label htmlFor="termsProfile" className="text-xs text-brand-text-secondary leading-tight">
+                Eu aceito os Termos de Uso e Política de Privacidade (obrigatório). 
+              </label>
+            </div>
+            <div className="flex items-start gap-2">
+              <input type="checkbox" id="marketingProfile" checked={authConsentMarketing} onChange={e => setAuthConsentMarketing(e.target.checked)} className="mt-1" />
+              <label htmlFor="marketingProfile" className="text-xs text-brand-text-secondary leading-tight">
+                Aceito receber comunicações da DNA Clinic.
+              </label>
+            </div>
+            <button disabled={authLoading} type="submit" className="w-full bg-brand-green hover:bg-brand-green-hover text-white font-bold py-3 px-4 rounded-lg flex justify-center items-center transition-colors">
+              {authLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Concluir Cadastro"}
+            </button>
+          </form>
+          <button onClick={handleSignOut} className="w-full mt-4 flex items-center justify-center gap-2 text-sm text-brand-text-muted hover:text-brand-text-primary transition-colors">
+            <LogOut className="w-4 h-4" /> Sair
+          </button>
+        </div>
       </div>
     );
   }
@@ -788,24 +880,8 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="w-full max-w-xs mb-6">
-          <label className="block text-left text-sm font-medium text-brand-text-secondary mb-1">Confirme seu CPF (obrigatório)</label>
-          <input 
-            type="text" 
-            placeholder="Apenas números" 
-            value={cpf} 
-            onChange={(e) => setCpf(e.target.value.replace(/\D/g, ''))}
-            maxLength={11}
-            className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-green text-black"
-          />
-        </div>
-
         <button 
           onClick={async () => {
-            if (cpf.length !== 11) {
-              alert('Por favor, informe um CPF válido com 11 dígitos.');
-              return;
-            }
             setIsLoading(true);
             try {
               const res = await fetch('/api/checkout', { 
