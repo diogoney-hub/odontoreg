@@ -78,6 +78,27 @@ const fileToBase64 = (file) => {
   });
 };
 
+const escapeHtml = (str) => {
+  if (typeof str !== 'string') return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+};
+
+function linkificarAtosCFO(text) {
+  if (typeof text !== 'string') return '';
+  const re = /\b(Resolu[çc][ãa]o|Portaria|Decis[ãa]o)\s+CFO[\s-]*(?:SEC[\s-]*)?n?º?\s*(\d{1,4})\/(\d{4})\b/gi;
+  const tipoMap = { resolucao: 'RESOLUCAO', portaria: 'PORTARIA', decisao: 'DECISAO' };
+  return text.replace(re, (m, tipo, num, ano) => {
+    const key = tipo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const t = tipoMap[key] || 'RESOLUCAO';
+    return `[${m}](http://sistemas.cfo.org.br/visualizar/atos/${t}/SEC/${ano}/${num}/)`;
+  });
+}
+
 export default function Home() {
   const supabase = createClient();
   const [session, setSession] = useState(null);
@@ -146,6 +167,11 @@ export default function Home() {
           setAuthMode('register');
         }
       }
+
+      const alterarCroParam = searchParams.get('alterarcro');
+      if (alterarCroParam === 'true') {
+        setStep('onboarding');
+      }
     }
 
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -185,10 +211,13 @@ export default function Home() {
       }
 
       const savedCro = localStorage.getItem('saved_cro');
+      const hasAlterarCroParam = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('alterarcro') === 'true';
       if (savedCro) {
         setSelectedUF(savedCro);
         setRememberCro(true);
-        setStep(prev => prev === 'onboarding' ? 'chat' : prev);
+        if (!hasAlterarCroParam) {
+          setStep(prev => prev === 'onboarding' ? 'chat' : prev);
+        }
       }
       setStatus("authenticated");
     }
@@ -484,8 +513,8 @@ export default function Home() {
       const dateStr = now.toLocaleDateString('pt-BR');
       const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       
-      const userName = dbUser?.nome_completo || session?.user?.name || 'Usuário';
-      const userEmail = dbUser?.email || session?.user?.email || '';
+      const userName = escapeHtml(dbUser?.nome_completo || session?.user?.name || 'Usuário');
+      const userEmail = escapeHtml(dbUser?.email || session?.user?.email || '');
 
       let conversationHtml = '';
       messages.forEach(msg => {
@@ -742,7 +771,8 @@ FORMATO E TOM: linguagem simples, clara, direta e empática. Ao apontar erro/vio
       });
 
       const cand = result.candidates?.[0];
-      const responseText = cand?.content?.parts?.map(p => p.text).filter(Boolean).join('') || "Desculpe, não consegui analisar sua requisição neste momento.";
+      let responseText = cand?.content?.parts?.map(p => p.text).filter(Boolean).join('') || "Desculpe, não consegui analisar sua requisição neste momento.";
+      responseText = linkificarAtosCFO(responseText);
       const chunks = cand?.groundingMetadata?.groundingChunks || [];
       const sources = chunks.map(c => ({ uri: c.web?.uri, title: c.web?.title })).filter(s => s.uri);
       const uniqueSources = Array.from(new Map(sources.map(s => [s.uri, s])).values());
@@ -1143,6 +1173,10 @@ FORMATO E TOM: linguagem simples, clara, direta e empática. Ao apontar erro/vio
       activeMenu={step === 'onboarding' ? 'alterarcro' : 'consulta'}
       userEmail={session?.user?.email || dbUser?.email}
       onAlterarCRO={() => setStep('onboarding')}
+      selectedCRO={selectedUF}
+      onExportar={step === 'chat' && messages && messages.length > 0 ? exportToPDF : undefined}
+      statusAssinatura={dbUser?.status_assinatura}
+      planoAtual={dbUser?.plano_atual}
     >
       {step === 'onboarding' ? (
         <main className="flex-1 flex items-center justify-center p-4 sm:p-8 bg-[#fafafa]">

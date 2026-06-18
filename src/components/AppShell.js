@@ -7,7 +7,10 @@ export default function AppShell({
   activeMenu = 'consulta', 
   userEmail = '', 
   onAlterarCRO, 
-  onExportar 
+  onExportar,
+  selectedCRO = '',
+  statusAssinatura = 'trial',
+  planoAtual = ''
 }) {
   const router = useRouter();
 
@@ -15,43 +18,145 @@ export default function AppShell({
     if (isHomeAction && typeof action === 'function') {
       action();
     } else {
-      router.push('/');
+      router.push('/?alterarcro=true');
     }
+  };
+
+  const renderPlanBadge = () => {
+    const isTrial = statusAssinatura === 'trial';
+    const isPagante = statusAssinatura === 'ativo';
+    const isCompleto = planoAtual === 'completo';
+    const isEssencial = planoAtual === 'essencial';
+
+    // Completo: fundo verde escuro e fontes brancas
+    if (isPagante && isCompleto) {
+      return (
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#005f3e] text-white uppercase tracking-wide mt-1 font-inter">
+          PLANO PRO
+        </span>
+      );
+    }
+
+    // Essencial: fundo verde claro e fontes pretas
+    if (isPagante && isEssencial) {
+      return (
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#e4f2ea] text-black border border-[#d8e3dc] uppercase tracking-wide mt-1 font-inter">
+          PLANO ESSENCIAL
+        </span>
+      );
+    }
+
+    // Trial: fundo cinza (mais escuro que o do navbar) e fontes vermelhas
+    if (isTrial || statusAssinatura === 'expirado') {
+      return (
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#e2e2e2] text-[#dc2626] uppercase tracking-wide mt-1 font-inter">
+          TRIAL
+        </span>
+      );
+    }
+
+    // Cancelado ou outros fallbacks
+    if (statusAssinatura === 'cancelado') {
+      return (
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#e2e2e2] text-gray-600 uppercase tracking-wide mt-1 font-inter">
+          CANCELADO
+        </span>
+      );
+    }
+
+    if (statusAssinatura === 'pagamento_pendente') {
+      return (
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-red-100 text-red-700 uppercase tracking-wide mt-1 font-inter">
+          PENDENTE
+        </span>
+      );
+    }
+
+    return (
+      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#e2e2e2] text-[#dc2626] uppercase tracking-wide mt-1 font-inter">
+        TRIAL
+      </span>
+    );
   };
 
   return (
     <div className="bg-background text-on-background font-body-md min-h-screen flex flex-col">
-      {/* TopNavBar Otimizada (Single Row Elegante) */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-surface-bright/95 backdrop-blur-sm border-b border-line-border dark:border-outline-variant shadow-sm transition-all">
-        <div className="flex items-center justify-between h-16 w-full px-4 sm:px-6 lg:px-8 mx-auto">
+      {/* TopNavBar Otimizada */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-[#d8e3dc] shadow-sm h-16 flex items-center">
+        <div className="flex items-center justify-between w-full h-full px-4 sm:px-6 lg:px-8 mx-auto">
           
-          {/* Esquerda: Logo */}
-          <div className="flex-shrink-0 flex items-center lg:w-[250px]">
-            <img alt="OdontoConforme Logo" className="h-8 sm:h-9 w-auto object-contain cursor-pointer" src="/logo.png" onClick={() => router.push('/')} />
+          {/* Esquerda: Logo (70% da altura da seção) */}
+          <div className="flex items-center h-full flex-shrink-0">
+            <img 
+              alt="OdontoConforme Logo" 
+              className="h-[44px] w-auto object-contain cursor-pointer" 
+              src="/logo.png" 
+              onClick={() => router.push('/')} 
+            />
           </div>
 
-          {/* Centro: Navegação Horizontal */}
-          <div className="flex items-center justify-center gap-2 sm:gap-6 lg:gap-8 h-full">
-            <button onClick={() => router.push('/')} className={`flex items-center justify-center transition-all active:scale-95 duration-200 border-b-2 h-full px-2 sm:px-3 ${activeMenu === 'consulta' ? 'text-primary border-primary' : 'text-on-surface-variant hover:text-primary border-transparent'}`}>
-              <span className="material-symbols-outlined text-[20px] sm:mr-2">search</span>
-              <span className="text-sm font-semibold hidden sm:block">Consultas</span>
+          {/* Centro: Navegação + CRO */}
+          <div className="flex items-center gap-1 sm:gap-3 h-full">
+            {/* Botão de Consulta */}
+            <button 
+              onClick={() => router.push('/')} 
+              className={`flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                activeMenu === 'consulta' 
+                  ? 'bg-[#eef5f1] text-[#005f3e] border border-[#d8e3dc]' 
+                  : 'bg-transparent text-[#54615b] hover:text-[#005f3e] border border-transparent'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[20px]">search</span>
+              <span className="hidden sm:inline">Consultas</span>
             </button>
-            <button onClick={() => handleAction(onAlterarCRO, true)} className={`flex items-center justify-center transition-all active:scale-95 duration-200 border-b-2 h-full px-2 sm:px-3 ${activeMenu === 'alterarcro' ? 'text-primary border-primary' : 'text-on-surface-variant hover:text-primary border-transparent'}`}>
-              <span className="material-symbols-outlined text-[20px] sm:mr-2">sync</span>
-              <span className="text-sm font-semibold hidden sm:block">Alterar CRO</span>
+
+            {/* Botão Exportar */}
+            {onExportar && (
+              <button 
+                onClick={onExportar} 
+                className={`flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-sm font-semibold transition-all duration-200 bg-transparent text-[#54615b] hover:text-[#005f3e] border border-transparent`}
+              >
+                <span className="material-symbols-outlined text-[20px]">download</span>
+                <span className="hidden sm:inline">Exportar</span>
+              </button>
+            )}
+
+            {/* Botão Minha Conta */}
+            <button 
+              onClick={() => router.push('/conta')} 
+              className={`flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                activeMenu === 'conta' 
+                  ? 'bg-[#eef5f1] text-[#005f3e] border border-[#d8e3dc]' 
+                  : 'bg-transparent text-[#54615b] hover:text-[#005f3e] border border-transparent'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[20px]">person</span>
+              <span className="hidden sm:inline">Minha Conta</span>
             </button>
-            <button onClick={() => router.push('/conta')} className={`flex items-center justify-center transition-all active:scale-95 duration-200 border-b-2 h-full px-2 sm:px-3 ${activeMenu === 'conta' ? 'text-primary border-primary' : 'text-on-surface-variant hover:text-primary border-transparent'}`}>
-              <span className="material-symbols-outlined text-[20px] sm:mr-2">person</span>
-              <span className="text-sm font-semibold hidden sm:block">Minha Conta</span>
-            </button>
+
+            {/* Divisória vertical | */}
+            <div className="h-5 w-[1px] bg-gray-300 mx-2"></div>
+
+            {/* CRO e link Trocar */}
+            {selectedCRO && (
+              <div className="flex items-center gap-1 text-sm font-bold text-gray-800 whitespace-nowrap">
+                <span>CRO-{selectedCRO}</span>
+                <button 
+                  onClick={() => handleAction(onAlterarCRO, true)}
+                  className="text-[#005f3e] hover:text-[#00472e] hover:underline font-bold cursor-pointer text-sm ml-1"
+                >
+                  Trocar
+                </button>
+              </div>
+            )}
           </div>
           
-          {/* Direita: E-mail do Usuário */}
-          <div className="hidden lg:flex flex-shrink-0 items-center justify-end lg:w-[250px]">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-surface rounded-full border border-line-border/50 shadow-sm">
-               <span className="material-symbols-outlined text-[18px] text-on-surface-variant">account_circle</span>
-               <span className="text-xs sm:text-sm text-on-surface-variant font-medium truncate max-w-[180px]">{userEmail || 'Usuário'}</span>
-            </div>
+          {/* Direita: E-mail do Usuário + Plano (Alinhados à direita) */}
+          <div className="flex flex-col items-end justify-center text-right flex-shrink-0">
+            <span className="text-sm font-semibold text-gray-900 leading-tight">
+              {userEmail || 'Usuário'}
+            </span>
+            {renderPlanBadge()}
           </div>
           
         </div>

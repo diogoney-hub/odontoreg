@@ -169,6 +169,9 @@ export default function MinhaConta() {
     <AppShell 
       activeMenu="conta" 
       userEmail={session?.user?.email || dbUser?.email}
+      selectedCRO={dbUser?.conselho_regional}
+      statusAssinatura={dbUser?.status_assinatura}
+      planoAtual={dbUser?.plano_atual}
     >
       {/* Stitch Design System - Conta */}
       <div className="w-full h-full flex flex-col font-inter">

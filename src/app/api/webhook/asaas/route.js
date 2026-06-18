@@ -50,7 +50,7 @@ export async function POST(request) {
     // Identificar o usuário no banco pelo Asaas Customer ID
     const { data: dbUser } = await supabase
       .from('usuarios')
-      .select('id, status_assinatura')
+      .select('id, status_assinatura, plano_atual')
       .eq('asaas_customer_id', customerId)
       .single();
 
@@ -62,11 +62,16 @@ export async function POST(request) {
     const oldStatus = dbUser.status_assinatura;
     let newStatus = oldStatus;
 
-    // Identificar o plano pago através da descrição ou do valor
-    let planoInferido = oldStatus || 'essencial'; // fallback
-    if (payment.value == 39.00 || (payment.description && payment.description.toLowerCase().includes('completo'))) {
+    // Identificar o plano pago — description como primário, valor como fallback
+    const desc = payment.description?.toLowerCase() || '';
+    let planoInferido = dbUser.plano_atual || 'essencial';
+    if (desc.includes('completo')) {
       planoInferido = 'completo';
-    } else if (payment.value == 29.00 || (payment.description && payment.description.toLowerCase().includes('essencial'))) {
+    } else if (desc.includes('essencial')) {
+      planoInferido = 'essencial';
+    } else if (Number(payment.value) === 39) {
+      planoInferido = 'completo';
+    } else if (Number(payment.value) === 29) {
       planoInferido = 'essencial';
     }
 
@@ -92,15 +97,22 @@ export async function POST(request) {
     }, { onConflict: 'asaas_payment_id' });
     if (pagError) throw new Error('Erro ao salvar pagamento no banco: ' + pagError.message);
 
-    // 2. Gravar o evento em 'eventos_assinatura' (garantindo que se o mesmo evento chegar, a idempotência barrará)
+    // 2. Gravar o evento em 'eventos_assinatura' (garantindo que se o mesmo evento concorrente chegar, a idempotência UNIQUE barrará)
     const { error: evtError } = await supabase.from('eventos_assinatura').insert({
       usuario_id: userId,
       tipo_evento: event,
-      origem: `webhook_${eventId}`, // chave de idempotência
+      origem: `webhook_${eventId}`, // chave de idempotência (UNIQUE no banco)
       plano_anterior: dbUser.plano_atual || oldStatus,
       plano_novo: planoInferido
     });
-    if (evtError) throw new Error('Erro ao salvar o log do evento: ' + evtError.message);
+    
+    if (evtError) {
+      if (evtError.code === '23505') {
+        console.log(`[Webhook Asaas] Detecção atômica de evento duplicado (concorrência): webhook_${eventId}`);
+        return new Response(JSON.stringify({ message: 'Evento já processado (Idempotência)' }), { status: 200 });
+      }
+      throw new Error('Erro ao salvar o log do evento: ' + evtError.message);
+    }
 
     // 3. Finalmente, atualizar o status principal de liberação de acesso do usuário e seu plano_atual
     if (oldStatus !== newStatus || dbUser.plano_atual !== planoInferido) {

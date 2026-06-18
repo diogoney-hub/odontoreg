@@ -44,8 +44,21 @@ export async function POST(request) {
       .eq('id', userId)
       .single();
 
-    if (!dbUser || !dbUser.asaas_customer_id) {
-      return new Response(JSON.stringify({ error: 'Assinatura não encontrada' }), { status: 404 });
+    if (!dbUser) {
+      return new Response(JSON.stringify({ error: 'Usuário não encontrado' }), { status: 404 });
+    }
+
+    if (dbUser.status_assinatura === 'trial') {
+      // Para usuários em período de teste (trial), cancelamos apenas localmente no Supabase
+      await supabase
+        .from('usuarios')
+        .update({ status_assinatura: 'cancelado' })
+        .eq('id', userId);
+      return new Response(JSON.stringify({ success: true }), { status: 200 });
+    }
+
+    if (!dbUser.asaas_customer_id) {
+      return new Response(JSON.stringify({ error: 'Assinatura ativa não encontrada (ID Asaas ausente)' }), { status: 400 });
     }
 
     const ASAAS_URL = process.env.ASAAS_API_URL || 'https://sandbox.asaas.com/api/v3';
@@ -61,25 +74,29 @@ export async function POST(request) {
       headers: { 'access_token': ASAAS_KEY }
     });
     
+    if (!getSubRes.ok) {
+      return new Response(JSON.stringify({ error: 'Falha ao consultar assinaturas no Asaas' }), { status: 502 });
+    }
+    
     const getSubData = await getSubRes.json();
     
-    // 3. Cancela a assinatura encontrada no Asaas
-    if (getSubData.data && getSubData.data.length > 0) {
-      const subscriptionId = getSubData.data[0].id;
-      
-      const delRes = await fetch(`${ASAAS_URL}/subscriptions/${subscriptionId}`, {
+    // 3. Cancela todas as assinaturas ativas encontradas no Asaas
+    if (!getSubData.data || getSubData.data.length === 0) {
+      return new Response(JSON.stringify({ error: 'Nenhuma assinatura ativa encontrada no Asaas para este usuário' }), { status: 404 });
+    }
+
+    for (const subscription of getSubData.data) {
+      const delRes = await fetch(`${ASAAS_URL}/subscriptions/${subscription.id}`, {
         method: 'DELETE',
         headers: { 'access_token': ASAAS_KEY }
       });
-      
+
       if (!delRes.ok) {
-        throw new Error('Falha ao cancelar no Asaas');
+        return new Response(JSON.stringify({ error: `Falha ao cancelar assinatura ${subscription.id} no Asaas` }), { status: 502 });
       }
     }
 
-    // 4. Atualiza o status no Supabase
-    // O usuário continua com acesso até o fim do ciclo se quiséssemos, 
-    // mas a regra 17 do cliente fala que atualizará o status.
+    // 4. Atualiza o status no Supabase apenas após confirmar a exclusão de todas as assinaturas no Asaas
     await supabase
       .from('usuarios')
       .update({ status_assinatura: 'cancelado' })

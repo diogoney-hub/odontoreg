@@ -84,10 +84,6 @@ export async function POST(req) {
 
     const now = new Date();
     const today = now.toISOString().split('T')[0];
-    const thisMonth = today.substring(0, 7);
-    
-    let currentDia = dbUser.data_ref_dia === today ? (dbUser.consultas_dia || 0) : 0;
-    let currentMes = dbUser.data_ref_mes?.startsWith(thisMonth) ? (dbUser.consultas_mes || 0) : 0;
     
     let limitDia = Infinity;
     let limitMes = Infinity;
@@ -111,12 +107,33 @@ export async function POST(req) {
         return NextResponse.json({ error: 'Sua assinatura está inativa ou pendente.' }, { status: 403 });
     }
 
-    if (currentDia >= limitDia || currentMes >= limitMes) {
-        return NextResponse.json({ error: `Limite de consultas alcançado. Você excedeu sua cota ${currentDia >= limitDia ? 'diária' : 'mensal'}.` }, { status: 403 });
+    // REGRA 13: Validação atômica de limites usando RPC no Postgres para prevenir condições de corrida
+    const limitDiaArg = limitDia === Infinity ? null : limitDia;
+    const limitMesArg = limitMes === Infinity ? null : limitMes;
+
+    const { data: wasIncremented, error: rpcError } = await supabase.rpc('incrementar_consultas', {
+      user_id_arg: user.id,
+      limit_dia_arg: limitDiaArg,
+      limit_mes_arg: limitMesArg,
+      today_arg: today
+    });
+
+    if (rpcError) {
+      console.error('Erro ao processar limites de consultas via RPC:', rpcError.message, rpcError.details, rpcError.code);
+      return NextResponse.json({ error: 'Erro ao processar cota de consultas.', details: rpcError.message }, { status: 500 });
+    }
+
+    if (!wasIncremented) {
+      return NextResponse.json({ error: `Limite de consultas alcançado. Você excedeu sua cota diária ou mensal.` }, { status: 403 });
     }
 
     const body = await req.json();
     const { history = [], userQueryText, currentAttachment, systemPrompt, conselhoRegional } = body;
+
+    // Atualiza o conselho regional se houver mudança
+    if (conselhoRegional && dbUser.conselho_regional !== conselhoRegional) {
+      await supabase.from('usuarios').update({ conselho_regional: conselhoRegional }).eq('id', user.id);
+    }
 
     const contents = history.map(msg => ({
       role: msg.role === 'user' ? 'user' : 'model',
@@ -156,34 +173,23 @@ export async function POST(req) {
     });
 
     const data = await response.json();
-    console.log('[grounding debug]', JSON.stringify(data.candidates?.[0]?.groundingMetadata ?? null));
 
     if (!response.ok) {
       console.error('Erro na API do Gemini:', data);
+      
+      // Reverte o incremento no contador de consultas caso a API do Gemini falhe
+      await supabase.rpc('decrementar_consultas', {
+        user_id_arg: user.id,
+        today_arg: today
+      });
+
       return NextResponse.json(
         { error: 'Erro ao se comunicar com a inteligência artificial.', details: data }, 
         { status: 502 } 
       );
     }
 
-    const updateData = {
-      consultas_dia: currentDia + 1,
-      data_ref_dia: today,
-      consultas_mes: currentMes + 1,
-      data_ref_mes: today,
-      ultima_atividade_em: new Date().toISOString()
-    };
-
-    if (!dbUser.primeira_consulta_em) {
-      updateData.primeira_consulta_em = new Date().toISOString();
-    }
-
-    if (conselhoRegional && dbUser.conselho_regional !== conselhoRegional) {
-      updateData.conselho_regional = conselhoRegional;
-    }
-
-    await supabase.from('usuarios').update(updateData).eq('id', user.id);
-
+    // Gravação da consulta no log de auditoria
     await supabase.from('consultas').insert({
       usuario_id: user.id,
       pergunta: userQueryText,
