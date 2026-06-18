@@ -111,6 +111,7 @@ export default function Home() {
   const [authPassword, setAuthPassword] = useState("");
   const [authName, setAuthName] = useState("");
   const [authCpf, setAuthCpf] = useState("");
+  const [authCro, setAuthCro] = useState("");
   const [authWhatsapp, setAuthWhatsapp] = useState("");
   const [authPerfil, setAuthPerfil] = useState("");
   const [authConsentTerms, setAuthConsentTerms] = useState(false);
@@ -300,6 +301,10 @@ export default function Home() {
       setAuthError("Selecione seu Perfil de Atuação.");
       return;
     }
+    if (!authCro) {
+      setAuthError("Selecione seu Conselho Regional (CRO).");
+      return;
+    }
     const cleanCpf = authCpf.replace(/\D/g, '');
     if (cleanCpf.length !== 11) {
       setAuthError("Por favor, insira um CPF válido.");
@@ -360,6 +365,7 @@ export default function Home() {
             referrer: utmData.referrer,
             headline_variante: utmData.headline_variante,
             documento: cleanCpf,
+            conselho_regional: authCro,
             whatsapp: cleanWhatsapp,
             email: authEmail
           })
@@ -379,6 +385,7 @@ export default function Home() {
                consentimento_data: new Date().toISOString(),
                consentimento_ip: ipData.ip || '0.0.0.0',
                documento: cleanCpf,
+               conselho_regional: authCro,
                whatsapp: cleanWhatsapp,
                email: authEmail
             }]);
@@ -430,6 +437,10 @@ export default function Home() {
       setAuthError("Selecione seu Perfil de Atuação.");
       return;
     }
+    if (!authCro) {
+      setAuthError("Selecione seu Conselho Regional (CRO).");
+      return;
+    }
     const cleanCpf = authCpf.replace(/\D/g, '');
     if (cleanCpf.length !== 11) {
       setAuthError("Por favor, insira um CPF válido.");
@@ -455,6 +466,7 @@ export default function Home() {
       const { error: updateError, data: updatedUser } = await supabase.from('usuarios').update({
         documento: cleanCpf,
         whatsapp: cleanWhatsapp,
+        conselho_regional: authCro,
         perfil_atuacao: authPerfil,
         consentimento_termos: authConsentTerms,
         consentimento_marketing: authConsentMarketing,
@@ -900,6 +912,15 @@ FORMATO E TOM: linguagem simples, clara, direta e empática. Ao apontar erro/vio
                 <input type="password" required value={authPassword} onChange={e => setAuthPassword(e.target.value)} minLength={6} className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-green" />
               </div>
               <div>
+                <label className="block text-sm font-medium text-brand-text-secondary mb-1">Estado de Atuação (CRO)</label>
+                <select required value={authCro} onChange={e => setAuthCro(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-green bg-white mb-4">
+                  <option value="" disabled>Selecione seu CRO...</option>
+                  {BRAZILIAN_STATES.map(state => (
+                    <option key={state.uf} value={state.uf}>{state.name} (CRO-{state.uf})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-brand-text-secondary mb-1">Perfil de Atuação</label>
                 <select required value={authPerfil} onChange={e => setAuthPerfil(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-green bg-white">
                   <option value="" disabled>Selecione seu perfil principal...</option>
@@ -1001,6 +1022,15 @@ FORMATO E TOM: linguagem simples, clara, direta e empática. Ao apontar erro/vio
             <div>
               <label className="block text-sm font-medium text-brand-text-secondary mb-1">WhatsApp</label>
               <input type="tel" required value={authWhatsapp} onChange={e => setAuthWhatsapp(e.target.value.replace(/\D/g, ''))} maxLength={11} placeholder="DDD + Número (Apenas números)" className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-green" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-brand-text-secondary mb-1">Estado de Atuação (CRO)</label>
+              <select required value={authCro} onChange={e => setAuthCro(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-green bg-white mb-4">
+                <option value="" disabled>Selecione seu CRO...</option>
+                {BRAZILIAN_STATES.map(state => (
+                  <option key={state.uf} value={state.uf}>{state.name} (CRO-{state.uf})</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-brand-text-secondary mb-1">Perfil de Atuação</label>
