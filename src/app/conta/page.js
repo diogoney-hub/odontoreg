@@ -3,9 +3,11 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../../lib/supabase/client';
 import AppShell from '../../components/AppShell';
+import { AlertCircle, CheckCircle, X } from 'lucide-react';
+
+const supabase = createClient();
 
 export default function MinhaConta() {
-  const supabase = createClient();
   const router = useRouter();
   const [session, setSession] = useState(null);
   const [dbUser, setDbUser] = useState(null);
@@ -20,6 +22,19 @@ export default function MinhaConta() {
   const [upgradePlano, setUpgradePlano] = useState('completo');
   const [isProcessingUpgrade, setIsProcessingUpgrade] = useState(false);
   const [checkoutGerado, setCheckoutGerado] = useState(false);
+
+  const [toast, setToast] = useState({ show: false, message: '', type: 'info' });
+  const showToast = (message, type = 'info') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast(prev => {
+        if (prev.message === message) {
+          return { show: false, message: '', type: 'info' };
+        }
+        return prev;
+      });
+    }, 4000);
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -42,12 +57,12 @@ export default function MinhaConta() {
       setLoading(false);
     }
     loadData();
-  }, [supabase, router]);
+  }, [router]);
 
   const handleUpgrade = async (e) => {
     e.preventDefault();
     if (!upgradeCpf || !upgradeWhatsapp) {
-      alert("Por favor, preencha o CPF/CNPJ e o WhatsApp para prosseguir.");
+      showToast("Por favor, preencha o CPF/CNPJ e o WhatsApp para prosseguir.", "error");
       return;
     }
     setIsProcessingUpgrade(true);
@@ -64,11 +79,11 @@ export default function MinhaConta() {
         setCheckoutGerado(true);
         setIsProcessingUpgrade(false);
       } else {
-        alert(data.error || 'Erro ao preparar o checkout. Tente novamente.');
+        showToast(data.error || 'Erro ao preparar o checkout. Tente novamente.', "error");
         setIsProcessingUpgrade(false);
       }
     } catch (err) {
-      alert('Erro de comunicação. Verifique sua conexão.');
+      showToast('Erro de comunicação. Verifique sua conexão.', "error");
       setIsProcessingUpgrade(false);
     }
   };
@@ -88,14 +103,14 @@ export default function MinhaConta() {
         body: JSON.stringify({ userId: dbUser.id })
       });
       if (res.ok) {
-        alert('Sua assinatura foi cancelada com sucesso. Você manterá o acesso até o fim do período.');
-        window.location.reload();
+        showToast('Sua assinatura foi cancelada com sucesso. Você manterá o acesso até o fim do período.', 'success');
+        setTimeout(() => window.location.reload(), 2000);
       } else {
         const errorData = await res.json();
-        alert('Erro ao cancelar: ' + (errorData.error || 'Tente novamente.'));
+        showToast('Erro ao cancelar: ' + (errorData.error || 'Tente novamente.'), 'error');
       }
     } catch (err) {
-      alert('Erro de conexão.');
+      showToast('Erro de conexão.', 'error');
     }
     setIsCancelling(false);
     setIsCancelModalOpen(false);
@@ -410,6 +425,19 @@ export default function MinhaConta() {
             </form>
             )}
           </div>
+        </div>
+      )}
+      {toast.show && (
+        <div className={`fixed bottom-4 right-4 z-[999] flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg border transition-all animate-in slide-in-from-bottom-5 duration-300 ${
+          toast.type === 'success' ? 'bg-green-50 text-green-800 border-green-200' :
+          toast.type === 'error' ? 'bg-red-50 text-red-800 border-red-200' :
+          'bg-blue-50 text-blue-800 border-blue-200'
+        }`}>
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <span className="text-sm font-medium">{toast.message}</span>
+          <button onClick={() => setToast({ show: false, message: '', type: 'info' })} className="ml-2 hover:opacity-80">
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
     </AppShell>

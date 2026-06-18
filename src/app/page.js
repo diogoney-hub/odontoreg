@@ -97,6 +97,18 @@ export default function Home() {
   const [authError, setAuthError] = useState("");
   const [authSuccess, setAuthSuccess] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'info' });
+  const showToast = (message, type = 'info') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast(prev => {
+        if (prev.message === message) {
+          return { show: false, message: '', type: 'info' };
+        }
+        return prev;
+      });
+    }, 4000);
+  };
   
   // Estados para Atribuição de Origem (UTMs)
   const [utmData, setUtmData] = useState({});
@@ -182,6 +194,12 @@ export default function Home() {
     }
   };
 
+  useEffect(() => {
+    if (dbUser?.documento) {
+      setCpf(dbUser.documento);
+    }
+  }, [dbUser]);
+
   const handleSignInGoogle = async () => {
     setAuthError("");
     setAuthSuccess("");
@@ -198,25 +216,32 @@ export default function Home() {
     setAuthError("");
     setAuthSuccess("");
     setAuthLoading(true);
-    const { data: { user }, error } = await supabase.auth.signInWithPassword({
-      email: authEmail,
-      password: authPassword,
-    });
-    if (user) {
-      setDbUser(user);
-      
-      // Auto-Checkout Logic se o usuário já tem os dados
-      if (typeof window !== 'undefined') {
-        const pendingCheckout = localStorage.getItem('pendingCheckout');
-        if (pendingCheckout && user.documento && user.whatsapp) {
-          localStorage.removeItem('pendingCheckout');
-          handleDirectCheckout(pendingCheckout, user.documento, user.whatsapp);
+    try {
+      const { data: { user }, error } = await supabase.auth.signInWithPassword({
+        email: authEmail,
+        password: authPassword,
+      });
+      if (error) throw error;
+      if (user) {
+        setDbUser(user);
+        
+        // Auto-Checkout Logic se o usuário já tem os dados
+        if (typeof window !== 'undefined') {
+          const pendingCheckout = localStorage.getItem('pendingCheckout');
+          if (pendingCheckout && user.documento && user.whatsapp) {
+            localStorage.removeItem('pendingCheckout');
+            handleDirectCheckout(pendingCheckout, user.documento, user.whatsapp);
+          }
         }
+      } else {
+        setDbUser(null);
       }
-    } else {
+    } catch (err) {
+      setAuthError(err.message || "Erro ao fazer login.");
       setDbUser(null);
+    } finally {
+      setAuthLoading(false);
     }
-    setAuthLoading(false);
   };
   
   const handleDirectCheckout = async (plano, cpfData, whatsappData) => {
@@ -231,11 +256,11 @@ export default function Home() {
       if (data.checkoutUrl) {
         window.location.href = data.checkoutUrl;
       } else {
-        alert('Erro: ' + (data.error || 'Não foi possível gerar a cobrança.'));
+        showToast(data.error || 'Não foi possível gerar a cobrança.', 'error');
         setIsLoading(false);
       }
     } catch (err) {
-      alert('Erro de conexão com o banco.');
+      showToast('Erro de conexão com o banco.', 'error');
       setIsLoading(false);
     }
   };
@@ -264,81 +289,84 @@ export default function Home() {
     setAuthSuccess("");
     setAuthLoading(true);
 
-    // 1. Criar Auth.Users
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email: authEmail,
-      password: authPassword,
-      options: {
-        data: {
-          full_name: authName
+    try {
+      // 1. Criar Auth.Users
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: authEmail,
+        password: authPassword,
+        options: {
+          data: {
+            full_name: authName
+          }
         }
+      });
+
+      if (signUpError) {
+        throw signUpError;
       }
-    });
 
-    if (signUpError) {
-      setAuthError(signUpError.message);
-      setAuthLoading(false);
-      return;
-    }
-
-    if (signUpData?.user) {
-      // 2. Atualizar tabela usuarios (criada pela trigger automaticamente) 
-      // com os dados complementares como UTM, IPs e Consents através da API do cliente (protegido por RLS para o próprio id).
-      
-      // Pequeno delay para garantir que a trigger PostgreSQL tenha terminado a criação inicial
-      await new Promise(res => setTimeout(res, 500)); 
-
-      const ipFetch = await fetch('https://api.ipify.org?format=json').catch(() => ({ json: () => ({ ip: null }) }));
-      const ipData = await ipFetch.json();
-
-      const { error: updateError } = await supabase
-        .from('usuarios')
-        .update({
-          consentimento_termos: authConsentTerms,
-          consentimento_marketing: authConsentMarketing,
-          consentimento_versao: 'v1.0',
-          consentimento_data: new Date().toISOString(),
-          consentimento_ip: ipData.ip || '0.0.0.0',
-          perfil_atuacao: authPerfil,
-          utm_source: utmData.utm_source,
-          utm_medium: utmData.utm_medium,
-          utm_campaign: utmData.utm_campaign,
-          utm_content: utmData.utm_content,
-          referrer: utmData.referrer,
-          headline_variante: utmData.headline_variante,
-          documento: cleanCpf,
-          whatsapp: cleanWhatsapp,
-          email: authEmail
-        })
-        .eq('id', signUpData.user.id);
+      if (signUpData?.user) {
+        // 2. Atualizar tabela usuarios (criada pela trigger automaticamente) 
+        // com os dados complementares como UTM, IPs e Consents através da API do cliente (protegido por RLS para o próprio id).
         
-      if (updateError) {
-        console.error("Erro ao salvar perfil extra:", updateError);
-        // Se a trigger falhou em criar a linha por algum erro de permissão no Postgres, tentamos o INSERT de fallback:
-        if (updateError.code === 'PGRST116' || updateError.details?.includes('0 rows')) {
-          await supabase.from('usuarios').insert([{
-             id: signUpData.user.id,
-             nome_completo: authName,
-             perfil_atuacao: authPerfil,
-             consentimento_termos: authConsentTerms,
-             consentimento_marketing: authConsentMarketing,
-             consentimento_versao: 'v1.0',
-             consentimento_data: new Date().toISOString(),
-             consentimento_ip: ipData.ip || '0.0.0.0',
-             documento: cleanCpf,
-             whatsapp: cleanWhatsapp,
-             email: authEmail
-          }]);
+        // Pequeno delay para garantir que a trigger PostgreSQL tenha terminado a criação inicial
+        await new Promise(res => setTimeout(res, 500)); 
+
+        const ipFetch = await fetch('https://api.ipify.org?format=json').catch(() => ({ json: () => ({ ip: null }) }));
+        const ipData = await ipFetch.json();
+
+        const { error: updateError } = await supabase
+          .from('usuarios')
+          .update({
+            consentimento_termos: authConsentTerms,
+            consentimento_marketing: authConsentMarketing,
+            consentimento_versao: 'v1.0',
+            consentimento_data: new Date().toISOString(),
+            consentimento_ip: ipData.ip || '0.0.0.0',
+            perfil_atuacao: authPerfil,
+            utm_source: utmData.utm_source,
+            utm_medium: utmData.utm_medium,
+            utm_campaign: utmData.utm_campaign,
+            utm_content: utmData.utm_content,
+            referrer: utmData.referrer,
+            headline_variante: utmData.headline_variante,
+            documento: cleanCpf,
+            whatsapp: cleanWhatsapp,
+            email: authEmail
+          })
+          .eq('id', signUpData.user.id);
+          
+        if (updateError) {
+          console.error("Erro ao salvar perfil extra:", updateError);
+          // Se a trigger falhou em criar a linha por algum erro de permissão no Postgres, tentamos o INSERT de fallback:
+          if (updateError.code === 'PGRST116' || updateError.details?.includes('0 rows')) {
+            await supabase.from('usuarios').insert([{
+               id: signUpData.user.id,
+               nome_completo: authName,
+               perfil_atuacao: authPerfil,
+               consentimento_termos: authConsentTerms,
+               consentimento_marketing: authConsentMarketing,
+               consentimento_versao: 'v1.0',
+               consentimento_data: new Date().toISOString(),
+               consentimento_ip: ipData.ip || '0.0.0.0',
+               documento: cleanCpf,
+               whatsapp: cleanWhatsapp,
+               email: authEmail
+            }]);
+          }
+        }
+
+        // Supabase Email Confirmations
+        if (!signUpData.session) {
+          setAuthSuccess("Conta criada com sucesso! Por favor, verifique seu e-mail para validar a conta antes de entrar.");
+          setAuthMode("login");
         }
       }
-
-      // Supabase Email Confirmations
-      if (!signUpData.session) {
-        setAuthSuccess("Conta criada com sucesso! Por favor, verifique seu e-mail para validar a conta antes de entrar.");
-        setAuthMode("login");
-      }
+    } catch (err) {
+      setAuthError(err.message || "Erro ao cadastrar.");
+    } finally {
+      setAuthLoading(false);
     }
-    setAuthLoading(false);
   };
 
   const handlePasswordReset = async (e) => {
@@ -348,12 +376,19 @@ export default function Home() {
       return;
     }
     setAuthLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(authEmail, {
-      redirectTo: `${window.location.origin}/update-password`,
-    });
-    if (error) setAuthError(error.message);
-    else setAuthError("Instruções de recuperação enviadas para o seu email.");
-    setAuthLoading(false);
+    setAuthError("");
+    setAuthSuccess("");
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(authEmail, {
+        redirectTo: `${window.location.origin}/update-password`,
+      });
+      if (error) throw error;
+      setAuthSuccess("Instruções de recuperação enviadas para o seu email.");
+    } catch (err) {
+      setAuthError(err.message || "Erro ao recuperar senha.");
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
   const handleSignOut = async () => {
@@ -384,41 +419,55 @@ export default function Home() {
     setAuthError("");
     setAuthLoading(true);
 
-    const ipFetch = await fetch('https://api.ipify.org?format=json').catch(() => ({ json: () => ({ ip: null }) }));
-    const ipData = await ipFetch.json();
+    try {
+      const ipFetch = await fetch('https://api.ipify.org?format=json').catch(() => ({ json: () => ({ ip: null }) }));
+      const ipData = await ipFetch.json();
 
-    const { error: updateError, data: updatedUser } = await supabase.from('usuarios').update({
-      documento: cleanCpf,
-      whatsapp: cleanWhatsapp,
-      perfil_atuacao: authPerfil,
-      consentimento_termos: authConsentTerms,
-      consentimento_marketing: authConsentMarketing,
-      consentimento_versao: 'v1.0',
-      consentimento_data: new Date().toISOString(),
-      consentimento_ip: ipData.ip || '0.0.0.0',
-      email: session?.user?.email || null,
-    }).eq('id', dbUser.id).select().single();
+      const { error: updateError, data: updatedUser } = await supabase.from('usuarios').update({
+        documento: cleanCpf,
+        whatsapp: cleanWhatsapp,
+        perfil_atuacao: authPerfil,
+        consentimento_termos: authConsentTerms,
+        consentimento_marketing: authConsentMarketing,
+        consentimento_versao: 'v1.0',
+        consentimento_data: new Date().toISOString(),
+        consentimento_ip: ipData.ip || '0.0.0.0',
+        email: session?.user?.email || null,
+      }).eq('id', dbUser.id).select().single();
 
-    if (updateError) {
-      if (updateError.code === '23505') {
-         setAuthError("Este CPF já está cadastrado em outra conta.");
+      if (updateError) {
+        if (updateError.code === '23505') {
+           setAuthError("Este CPF já está cadastrado em outra conta.");
+        } else {
+           setAuthError("Erro ao salvar perfil. Tente novamente.");
+        }
       } else {
-         setAuthError("Erro ao salvar perfil. Tente novamente.");
-      }
-    } else {
-      setDbUser(updatedUser);
-      if (typeof window !== 'undefined') {
-        const pendingCheckout = localStorage.getItem('pendingCheckout');
-        if (pendingCheckout) {
-          localStorage.removeItem('pendingCheckout');
-          handleDirectCheckout(pendingCheckout, cleanCpf, cleanWhatsapp);
+        setDbUser(updatedUser);
+        if (typeof window !== 'undefined') {
+          const pendingCheckout = localStorage.getItem('pendingCheckout');
+          if (pendingCheckout) {
+            localStorage.removeItem('pendingCheckout');
+            handleDirectCheckout(pendingCheckout, cleanCpf, cleanWhatsapp);
+          }
         }
       }
+    } catch (err) {
+      setAuthError(err.message || "Erro inesperado ao salvar perfil.");
+    } finally {
+      setAuthLoading(false);
     }
-    setAuthLoading(false);
   };
   
   const [attachment, setAttachment] = useState(null); 
+
+  useEffect(() => {
+    return () => {
+      if (attachment?.preview) {
+        URL.revokeObjectURL(attachment.preview);
+      }
+    };
+  }, [attachment?.preview]);
+
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -553,7 +602,7 @@ export default function Home() {
       document.body.removeChild(container);
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
-      alert("Não foi possível gerar o PDF no momento.");
+      showToast("Não foi possível gerar o PDF no momento.", "error");
     }
     setIsLoading(false);
   };
@@ -599,7 +648,7 @@ export default function Home() {
     if (!file) return;
 
     if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
-      alert('Por favor, selecione um arquivo de imagem (PNG, JPG) ou PDF.');
+      showToast('Por favor, selecione um arquivo de imagem (PNG, JPG) ou PDF.', 'error');
       return;
     }
 
@@ -619,10 +668,14 @@ export default function Home() {
   };
 
   const removeAttachment = () => {
+    if (attachment?.preview) {
+      URL.revokeObjectURL(attachment.preview);
+    }
     setAttachment(null);
   };
 
   const handleSendMessage = async () => {
+    if (isLoading) return;
     if (!inputText.trim() && !attachment) return;
 
     const userMsg = { 
@@ -643,23 +696,29 @@ export default function Home() {
     setIsLoading(true);
     setErrorMsg('');
 
-    const systemPrompt = `Você é um assistente jurídico e ético especializado em odontologia no Brasil. Deve possuir todos os conhecimentos nas regras, normas, leis, orientações e atribuições do CFO (Conselho Federal de Odontologia) e de todos os Conselhos Regionais (CRO). 
-    Seu objetivo é ajudar dentistas a entenderem as regras e orientações do CFO (Conselho Federal de Odontologia) e dos Conselhos Regionais (CRO).
-    Diretrizes obrigatórias:
-    1. Utilize linguagem extremamente simples, clara, direta e empática.
-    2. Pesquise na internet as normativas ATUAIS do CFO e, principalmente, do CRO do estado do usuário.
-    3. Traga sempre a fonte de onde tirou a informação no texto (ex: "Segundo o Artigo X do Código de Ética (Resolução CFO 118/2012)...") e com um link de acesso ao usuário para que ele possa acessar a fonte.
-    4. Se o usuário enviar uma imagem (foto, panfleto, print de rede social), FAÇA UMA AUDITORIA RIGOROSA DE MARKETING ODONTOLÓGICO. 
-       - Analise se há promessa de resultados, uso indevido de 'Antes e Depois' (sem o nome e CRO do profissional), sensacionalismo, divulgação de preços/promoções, exposição desnecessária do paciente, ou falta das informações obrigatórias na arte.
-       - Aponte os potenciais problemas éticos encontrados na imagem e sugira o que ele deve corrigir para adequar ao Código de Ética.
-    5. Se não houver uma regra específica, diga claramente que não encontrou uma proibição/permissão explícita nos normativos atuais.
-    6. Sempre que apontar um possível erro, uma possível violação ou algum alerta, indique:
-       - O que pode ser realizado para eliminar ou minimizar o erro / violação / alerta.
-       - Se estiver em dúvida ou incerteza, indique claramente o nível de certeza e confiabilidade da informação.`;
+    const systemPrompt = `Você é o assistente do OdontoConforme, voltado a cirurgiões-dentistas e clínicas odontológicas no Brasil. Ajuda a entender e cumprir as regras do CFO e dos CROs, com foco em conformidade, ética e publicidade.
 
-    const userQueryText = `O usuário é registrado no estado: ${selectedUF} (CRO-${selectedUF}). 
-    Texto do usuário: ${currentInputText}
-    Por favor, responda com base no site oficial do CFO (cfo.org.br) e no site oficial do CRO-${selectedUF}.`;
+Você é um assistente de ORIENTAÇÃO — não uma autoridade definitiva nem substituto de consultoria jurídica. Seu valor está em ser confiável e honesto sobre o que sabe e o que não consegue confirmar. Nunca pareça saber mais do que pode verificar.
+
+REGRA INVIOLÁVEL DE PROVENIÊNCIA:
+Separe sempre explicar um princípio de citar uma fonte específica.
+1. Princípios gerais e conceituais (ex.: "publicidade odontológica não pode prometer resultados"): você pode explicar com seu conhecimento, desde que deixe claro que é orientação geral e oriente confirmar na fonte oficial.
+2. Citações específicas — número de resolução, número de artigo, data, ou link: só pode fornecer se vier de uma fonte recuperada NESTA interação (grounding/base).
+   - É TERMINANTEMENTE PROIBIDO inventar, adivinhar, completar ou "lembrar de memória" um número de norma, artigo ou URL.
+   - Não escreva "Resolução CFO XXX/AAAA", "Art. X", nem link, se não recebeu isso de uma fonte verificada agora. Na menor dúvida, NÃO cite — descreva o princípio.
+3. Links: nunca componha uma URL. Só forneça link vindo de fonte recuperada. Sem link verificado, nomeie a fonte (ex.: "site oficial do CFO") sem fabricar o endereço.
+
+QUANDO NÃO TEM FONTE VERIFICADA:
+Não preencha a lacuna. Diga: "Não consigo confirmar a norma específica sobre isso em fonte verificada agora. O princípio geral é [X], mas confirme com o seu CRO ou no site oficial antes de agir." Num produto de compliance, "não consegui confirmar" é uma resposta correta e valiosa.
+
+JURISDIÇÃO: Regras variam entre CFO (federal) e cada CRO estadual. Use o estado/CRO do usuário. Se não souber, pergunte ou avise que pode variar conforme o CRO.
+
+AUDITORIA DE PUBLICIDADE (ao receber imagem ou PDF de peça publicitária):
+Auditoria rigorosa de marketing odontológico. Verifique: promessa/garantia de resultado; "antes e depois" sem nome e CRO do profissional; sensacionalismo; divulgação de preço/promoção; exposição desnecessária do paciente; ausência de dados obrigatórios (responsável técnico, CRO). Para cada problema, diga o que corrigir. Aplique a MESMA regra de proveniência: princípio você pode afirmar; número de artigo/resolução só com fonte verificada.
+
+FORMATO E TOM: linguagem simples, clara, direta e empática. Ao apontar erro/violação/alerta, indique como eliminar ou minimizar. Indique sempre o nível de certeza (alto/médio/baixo) e lembre que é orientação, não decisão final; para algo consequente, recomende confirmar com o CRO ou advogado. Nunca sacrifique a honestidade por completude.`;
+
+    const userQueryText = `Estado/CRO do usuário: ${selectedUF} (CRO-${selectedUF}). Pergunta: ${currentInputText}`;
 
     try {
       const url = '/api/chat';
@@ -668,78 +727,40 @@ export default function Home() {
         .filter(m => !m.isError && m.role !== 'system')
         .map(m => ({ role: m.role, text: m.text }));
 
-      // 1ª Requisição: Obter a resposta em texto instantaneamente sem o Google Search
-      const payloadFast = {
+      const payload = {
         history: history,
         userQueryText: userQueryText,
         systemPrompt: systemPrompt,
         currentAttachment: currentAttachment,
-        mode: 'fast-answer',
         conselhoRegional: selectedUF
       };
 
-      const resultFast = await fetchWithRetry(url, {
+      const result = await fetchWithRetry(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payloadFast)
+        body: JSON.stringify(payload)
       });
 
-      const responseText = resultFast.candidates?.[0]?.content?.parts?.[0]?.text || "Desculpe, não consegui analisar sua requisição neste momento.";
-      const messageId = Date.now() + 1;
+      const cand = result.candidates?.[0];
+      const responseText = cand?.content?.parts?.map(p => p.text).filter(Boolean).join('') || "Desculpe, não consegui analisar sua requisição neste momento.";
+      const chunks = cand?.groundingMetadata?.groundingChunks || [];
+      const sources = chunks.map(c => ({ uri: c.web?.uri, title: c.web?.title })).filter(s => s.uri);
+      const uniqueSources = Array.from(new Map(sources.map(s => [s.uri, s])).values());
 
       setMessages(prev => [...prev, {
-        id: messageId,
+        id: Date.now() + 1,
         role: 'model',
         text: responseText,
-        sources: [],
-        isSearchingSources: true
+        sources: uniqueSources,
+        isSearchingSources: false
       }]);
-      
-      // O texto já apareceu! Desligamos o loader principal do envio.
       setIsLoading(false);
-
-      // 2ª Requisição: Agora ligamos o Google Search para buscar os links em background
-      const payloadSources = {
-        history: history,
-        userQueryText: userQueryText,
-        systemPrompt: systemPrompt,
-        currentAttachment: currentAttachment,
-        mode: 'search-sources',
-        conselhoRegional: selectedUF
-      };
-
-      try {
-        const resultSources = await fetchWithRetry(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payloadSources)
-        });
-
-        const attributions = resultSources.candidates?.[0]?.groundingMetadata?.groundingAttributions;
-        const sources = attributions 
-          ? attributions.map(a => ({ uri: a.web?.uri, title: a.web?.title })).filter(s => s.uri) 
-          : [];
-        const uniqueSources = Array.from(new Map(sources.map(item => [item.uri, item])).values());
-
-        setMessages(prev => prev.map(msg => 
-          msg.id === messageId 
-            ? { ...msg, sources: uniqueSources, isSearchingSources: false } 
-            : msg
-        ));
-      } catch (sourceError) {
-        console.error("Erro ao buscar as fontes:", sourceError);
-        setMessages(prev => prev.map(msg => 
-          msg.id === messageId 
-            ? { ...msg, isSearchingSources: false } 
-            : msg
-        ));
-      }
 
     } catch (error) {
       console.error(error);
       
       if (error.status === 403) {
-        alert(error.message || "Limite alcançado! Por favor, vá em 'Minha Conta' para realizar o Upgrade.");
+        showToast(error.message || "Limite alcançado! Por favor, vá em 'Minha Conta' para realizar o Upgrade.", "error");
         setInputText(currentInputText); 
         setAttachment(currentAttachment);
       } else {
@@ -757,7 +778,9 @@ export default function Home() {
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage();
+      if (!isLoading) {
+        handleSendMessage();
+      }
     }
   };
 
@@ -779,13 +802,13 @@ export default function Home() {
         <div className="w-full max-w-md bg-brand-bg-secondary p-8 rounded-xl shadow-lg border border-gray-200">
           <div className="flex justify-center gap-4 mb-6 border-b border-gray-200 pb-4">
             <button 
-              onClick={() => { setAuthMode('login'); setAuthError(''); }}
+              onClick={() => { setAuthMode('login'); setAuthError(''); setAuthSuccess(''); }}
               className={`font-semibold pb-2 border-b-2 transition-colors ${authMode === 'login' ? 'border-brand-green text-brand-green' : 'border-transparent text-brand-text-muted hover:text-brand-text-primary'}`}
             >
               Entrar
             </button>
             <button 
-              onClick={() => { setAuthMode('register'); setAuthError(''); }}
+              onClick={() => { setAuthMode('register'); setAuthError(''); setAuthSuccess(''); }}
               className={`font-semibold pb-2 border-b-2 transition-colors ${authMode === 'register' ? 'border-brand-green text-brand-green' : 'border-transparent text-brand-text-muted hover:text-brand-text-primary'}`}
             >
               Cadastrar
@@ -816,7 +839,7 @@ export default function Home() {
                 <input type="password" required value={authPassword} onChange={e => setAuthPassword(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-green" />
               </div>
               <div className="flex justify-end">
-                <button type="button" onClick={() => setAuthMode('forgot')} className="text-sm text-brand-green hover:underline">Esqueci minha senha</button>
+                <button type="button" onClick={() => { setAuthMode('forgot'); setAuthError(''); setAuthSuccess(''); }} className="text-sm text-brand-green hover:underline">Esqueci minha senha</button>
               </div>
               <button disabled={authLoading} type="submit" className="w-full bg-brand-green hover:bg-brand-green-hover text-white font-bold py-3 px-4 rounded-lg flex justify-center items-center transition-colors">
                 {authLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Entrar com E-mail"}
@@ -889,7 +912,7 @@ export default function Home() {
                 {authLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Enviar Link de Recuperação"}
               </button>
               <div className="flex justify-center mt-4">
-                <button type="button" onClick={() => setAuthMode('login')} className="text-sm text-brand-text-muted hover:underline">Voltar para Login</button>
+                <button type="button" onClick={() => { setAuthMode('login'); setAuthError(''); setAuthSuccess(''); }} className="text-sm text-brand-text-muted hover:underline">Voltar para Login</button>
               </div>
             </form>
           )}
@@ -1068,8 +1091,26 @@ export default function Home() {
           </div>
         </div>
 
+        {!dbUser?.documento && (
+          <div className="w-full max-w-xs mb-6 text-left">
+            <label className="block text-sm font-medium text-brand-text-secondary mb-1">CPF ou CNPJ para faturamento</label>
+            <input 
+              type="text" 
+              required 
+              value={cpf} 
+              onChange={e => setCpf(e.target.value.replace(/\D/g, ''))} 
+              placeholder="Digite apenas números" 
+              className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-green bg-white text-base" 
+            />
+          </div>
+        )}
+
         <button 
           onClick={async () => {
+            if (!cpf && !dbUser?.documento) {
+              showToast('Por favor, informe seu CPF/CNPJ.', 'error');
+              return;
+            }
             setIsLoading(true);
             try {
               const res = await fetch('/api/checkout', { 
@@ -1079,9 +1120,9 @@ export default function Home() {
               });
               const data = await res.json();
               if (data.checkoutUrl) window.location.href = data.checkoutUrl;
-              else alert('Erro: ' + (data.error || 'Não foi possível gerar a cobrança.'));
+              else showToast(data.error || 'Não foi possível gerar a cobrança.', 'error');
             } catch (err) {
-              alert('Erro de conexão com o banco.');
+              showToast('Erro de conexão com o banco.', 'error');
             }
             setIsLoading(false);
           }}
@@ -1259,7 +1300,7 @@ export default function Home() {
                           {msg.sources.map((source, idx) => (
                             <a key={idx} href={source.uri} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-1.5 bg-surface-container hover:bg-surface-container-high border border-outline-variant rounded-lg text-body-sm text-on-surface-variant transition-colors max-w-full truncate">
                               <span className="material-symbols-outlined text-[16px]">open_in_new</span>
-                              <span className="truncate">{source.title || new URL(source.uri).hostname}</span>
+                              <span className="truncate">{source.title || (() => { try { return new URL(source.uri).hostname; } catch { return source.uri; } })()}</span>
                             </a>
                           ))}
                         </div>
@@ -1351,6 +1392,20 @@ export default function Home() {
       )}
       
       <Analytics />
+
+      {toast.show && (
+        <div className={`fixed bottom-4 right-4 z-[999] flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg border transition-all animate-in slide-in-from-bottom-5 duration-300 ${
+          toast.type === 'success' ? 'bg-green-50 text-green-800 border-green-200' :
+          toast.type === 'error' ? 'bg-red-50 text-red-800 border-red-200' :
+          'bg-blue-50 text-blue-800 border-blue-200'
+        }`}>
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <span className="text-sm font-medium">{toast.message}</span>
+          <button onClick={() => setToast({ show: false, message: '', type: 'info' })} className="ml-2 hover:opacity-80">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </AppShell>
   );
 }

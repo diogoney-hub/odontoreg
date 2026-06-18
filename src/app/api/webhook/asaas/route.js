@@ -8,9 +8,13 @@ export async function POST(request) {
     const asaasToken = request.headers.get('asaas-access-token');
     const expectedToken = process.env.ASAAS_WEBHOOK_TOKEN; // Deve ser cadastrado no .env.local
 
-    // Se o ambiente tem a variável configurada, exigimos ela para prosseguir.
-    // Isso blinda contra invasores tentando forjar POSTs de 'PAYMENT_RECEIVED'.
-    if (expectedToken && asaasToken !== expectedToken) {
+    // O token de webhook é obrigatório por segurança. Se não estiver configurado, retorna 500.
+    if (!expectedToken) {
+      console.error('[Webhook Asaas] Erro crítico: ASAAS_WEBHOOK_TOKEN não está configurado no ambiente.');
+      return new Response(JSON.stringify({ error: 'Erro interno de configuração do servidor' }), { status: 500 });
+    }
+
+    if (asaasToken !== expectedToken) {
       return new Response(JSON.stringify({ error: 'Token de webhook inválido' }), { status: 401 });
     }
 

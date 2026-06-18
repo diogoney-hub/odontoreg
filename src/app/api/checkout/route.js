@@ -34,12 +34,17 @@ export async function POST(request) {
     const body = await request.json().catch(() => ({}));
     let { cpf, plano, whatsapp } = body;
 
+    if (plano && plano !== 'essencial' && plano !== 'completo') {
+      return new Response(JSON.stringify({ error: 'Plano inválido selecionado.' }), { status: 400 });
+    }
+
     // Definição dos Preços Base
     let valorAssinatura = 0;
     if (plano === 'completo') {
       valorAssinatura = 39.00;
     } else {
       valorAssinatura = 29.00; // default é o Essencial
+      plano = 'essencial'; // Normaliza
     }
 
     const email = user.email;
@@ -101,7 +106,7 @@ export async function POST(request) {
     } else {
       // O cliente já existe no Asaas (foi criado nos testes anteriores sem CPF). Vamos atualizá-lo!
       const updateRes = await fetch(`${ASAAS_URL}/customers/${customerId}`, {
-        method: 'POST',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'access_token': ASAAS_KEY

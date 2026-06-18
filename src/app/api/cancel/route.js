@@ -1,13 +1,36 @@
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request) {
   try {
-    const payload = await request.json().catch(() => null);
-    const userId = payload?.userId; // O cliente passará o id pela rota para simplificar a auth, ou recuperamos via Bearer
+    const cookieStore = await cookies();
+    const supabaseClient = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              )
+            } catch {}
+          },
+        },
+      }
+    );
 
-    if (!userId) {
-      return new Response(JSON.stringify({ error: 'Usuário não informado' }), { status: 400 });
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Não autenticado' }), { status: 401 });
     }
+
+    const userId = user.id;
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,

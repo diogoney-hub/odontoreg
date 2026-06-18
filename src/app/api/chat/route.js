@@ -3,12 +3,41 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
 export async function GET(req) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return NextResponse.json({ error: 'No key' }, { status: 500 });
-  const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-  const response = await fetch(url);
-  const data = await response.json();
-  return NextResponse.json(data);
+  try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              )
+            } catch {}
+          },
+        },
+      }
+    );
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return NextResponse.json({ error: 'No key' }, { status: 500 });
+    const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+    const response = await fetch(url);
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    return NextResponse.json({ error: 'Erro interno no servidor' }, { status: 500 });
+  }
 }
 
 export async function POST(req) {
@@ -87,7 +116,7 @@ export async function POST(req) {
     }
 
     const body = await req.json();
-    const { history = [], userQueryText, currentAttachment, systemPrompt, mode, conselhoRegional } = body;
+    const { history = [], userQueryText, currentAttachment, systemPrompt, conselhoRegional } = body;
 
     const contents = history.map(msg => ({
       role: msg.role === 'user' ? 'user' : 'model',
@@ -113,7 +142,7 @@ export async function POST(req) {
       systemInstruction: { parts: [{ text: systemPrompt }] },
     };
 
-    if (mode !== 'fast-answer' && !currentAttachment) {
+    if (!currentAttachment) {
       payload.tools = [{ googleSearch: {} }];
     }
 
@@ -127,7 +156,8 @@ export async function POST(req) {
     });
 
     const data = await response.json();
-    
+    console.log('[grounding debug]', JSON.stringify(data.candidates?.[0]?.groundingMetadata ?? null));
+
     if (!response.ok) {
       console.error('Erro na API do Gemini:', data);
       return NextResponse.json(
@@ -136,39 +166,36 @@ export async function POST(req) {
       );
     }
 
-    // Se chegou até aqui, a IA respondeu com sucesso. Registramos o consumo apenas se não for a chamada secundária de fontes.
-    if (mode !== 'search-sources') {
-      const updateData = {
-        consultas_dia: currentDia + 1,
-        data_ref_dia: today,
-        consultas_mes: currentMes + 1,
-        data_ref_mes: today,
-        ultima_atividade_em: new Date().toISOString()
-      };
+    const updateData = {
+      consultas_dia: currentDia + 1,
+      data_ref_dia: today,
+      consultas_mes: currentMes + 1,
+      data_ref_mes: today,
+      ultima_atividade_em: new Date().toISOString()
+    };
 
-      if (!dbUser.primeira_consulta_em) {
-        updateData.primeira_consulta_em = new Date().toISOString();
-      }
-
-      if (conselhoRegional && dbUser.conselho_regional !== conselhoRegional) {
-        updateData.conselho_regional = conselhoRegional;
-      }
-
-      await supabase.from('usuarios').update(updateData).eq('id', user.id);
-
-      await supabase.from('consultas').insert({
-        usuario_id: user.id,
-        pergunta: userQueryText,
-        categoria: 'chat',
-        modelo: modelName,
-      });
+    if (!dbUser.primeira_consulta_em) {
+      updateData.primeira_consulta_em = new Date().toISOString();
     }
+
+    if (conselhoRegional && dbUser.conselho_regional !== conselhoRegional) {
+      updateData.conselho_regional = conselhoRegional;
+    }
+
+    await supabase.from('usuarios').update(updateData).eq('id', user.id);
+
+    await supabase.from('consultas').insert({
+      usuario_id: user.id,
+      pergunta: userQueryText,
+      categoria: 'chat',
+      modelo: modelName,
+    });
 
     return NextResponse.json(data);
   } catch (error) {
     console.error('Erro interno na API Route:', error);
     return NextResponse.json(
-      { error: 'Ocorreu um erro inesperado no servidor.', details: error.message, stack: error.stack }, 
+      { error: 'Ocorreu um erro inesperado no servidor.' },
       { status: 500 }
     );
   }
