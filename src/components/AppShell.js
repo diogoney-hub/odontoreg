@@ -24,33 +24,39 @@ export default function AppShell({
 
   const renderPlanBadge = () => {
     const isTrial = statusAssinatura === 'trial';
+    const isExpirado = statusAssinatura === 'expirado';
     const isPagante = statusAssinatura === 'ativo';
     const isCompleto = planoAtual === 'completo';
     const isEssencial = planoAtual === 'essencial';
 
-    // Completo: fundo verde escuro e fontes brancas
     if (isPagante && isCompleto) {
       return (
         <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#005f3e] text-white uppercase tracking-wide mt-1 font-inter">
-          PLANO PRO
+          COMPLETO
         </span>
       );
     }
 
-    // Essencial: fundo verde claro e fontes pretas
     if (isPagante && isEssencial) {
       return (
         <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#e4f2ea] text-black border border-[#d8e3dc] uppercase tracking-wide mt-1 font-inter">
-          PLANO ESSENCIAL
+          ESSENCIAL
         </span>
       );
     }
 
-    // Trial: fundo cinza (mais escuro que o do navbar) e fontes vermelhas
-    if (isTrial || statusAssinatura === 'expirado') {
+    if (isTrial) {
       return (
         <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#e2e2e2] text-[#dc2626] uppercase tracking-wide mt-1 font-inter">
           TRIAL
+        </span>
+      );
+    }
+
+    if (isExpirado) {
+      return (
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#dc2626] text-white uppercase tracking-wide mt-1 font-inter">
+          EXPIRADO
         </span>
       );
     }
