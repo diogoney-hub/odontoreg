@@ -809,7 +809,7 @@ FORMATO E TOM: linguagem simples, clara, direta e empática. Ao apontar erro/vio
         setMessages(prev => [...prev, {
           id: Date.now() + 1,
           role: 'model',
-          text: "Houve um problema de conexão ao consultar as bases de dados ou processar a imagem. Tente novamente em alguns segundos.",
+          text: `Houve um problema ao processar sua consulta. Detalhe: ${error.message || 'Erro desconhecido'}. Tente novamente.`,
           isError: true
         }]);
       }

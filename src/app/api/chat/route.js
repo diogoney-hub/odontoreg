@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
+export const maxDuration = 60; // Configura o timeout da serverless function no Vercel (em segundos)
+
 export async function GET(req) {
   try {
     const cookieStore = await cookies();
